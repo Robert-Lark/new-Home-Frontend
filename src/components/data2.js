@@ -1,20 +1,16 @@
 import React from "react";
 import {graphql} from "gatsby";
-import ReleasesList from "../components/ReleasesList";
+
 
 function releases({data}) {
   const releases = data.releases.nodes;
-  return (
-    <div>
-      <ReleasesList releases={releases} />
-    </div>
-  );
+  return releases
 }
 
 export default releases;
 
 export const query = graphql`
-  query Releases {
+  query AllReleases {
     releases: allSanityRelease {
       nodes {
         id

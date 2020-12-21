@@ -6,20 +6,27 @@ import Player from "../musicPlayer/Player";
 import Song from "../musicPlayer/Song";
 import Library from "../musicPlayer/library";
 import Nav from "../musicPlayer/Nav";
-//Import data
-import chillhop from "../musicPlayer/data";
-
 //Util
 import {playAudio} from "../musicPlayer/util";
 
 function QuietCast({data}) {
-  console.log(data.content.nodes);
-  const datatester = chillhop()
-  console.log(datatester);
+  //Import data
+  function mixData(content) {
+    return content.map((mix) => ({
+      name: mix.name,
+      cover: mix.image.asset.fluid,
+      artist: mix.artist,
+      audio: mix.audio.asset.url,
+      color: mix.color,
+      id: mix.id,
+      active: mix.active,
+    }));
+  }
+  console.log(data.content.nodes[0]);
   //Ref
   const audioRef = useRef(null);
 
-  const [songs, setSongs] = useState(chillhop());
+  const [songs, setSongs] = useState(mixData(data.content.nodes));
   const [currentSong, setCurrentSong] = useState(songs[0]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [songInfo, setSongInfo] = useState({
@@ -88,22 +95,33 @@ function QuietCast({data}) {
 export default QuietCast;
 
 export const query = graphql`
-  query MyQuery {
+  query InterviewInfo {
     content: allSanityInterview {
       nodes {
+        active
+        id
+        cat
+        artist
+        name
+        color
+        audio {
+          asset {
+            url
+          }
+        }
+        description
         answer1
         answer10
         answer11
         answer12
         answer13
         answer14
-        answer16
         answer15
+        answer16
         answer17
         answer18
         answer19
         answer2
-        answer20
         answer3
         answer4
         answer5
@@ -111,8 +129,6 @@ export const query = graphql`
         answer7
         answer8
         answer9
-        cat
-        description
         question1
         question10
         question11
@@ -125,7 +141,6 @@ export const query = graphql`
         question18
         question19
         question2
-        question20
         question3
         question4
         question5
@@ -145,7 +160,6 @@ export const query = graphql`
         style18
         style19
         style2
-        style20
         style3
         style4
         style5
@@ -153,7 +167,6 @@ export const query = graphql`
         style7
         style8
         style9
-        url
         image {
           asset {
             fixed(width: 200, height: 200) {
@@ -164,7 +177,6 @@ export const query = graphql`
             }
           }
         }
-        name
       }
     }
   }

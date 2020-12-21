@@ -1,13 +1,18 @@
-import React from 'react';
+import React from "react";
+import Img from "gatsby-image";
 
 function Song({currentSong}) {
-    return (
-			<div className="song-container">
-				<img src={currentSong.cover} alt={currentSong.name}/>
-				<h2>{currentSong.name}</h2>
-				<h3>{currentSong.artist}</h3>
-			</div>
-		);
+  return (
+    <div className="song-container">
+      <Img
+        fluid={currentSong.cover}
+		style={{width: "30%", borderRadius: "50%"}}
+		alt={currentSong.name}
+      />
+      <h2>{currentSong.name}</h2>
+      <h3>{currentSong.artist}</h3>
+    </div>
+  );
 }
 
 export default Song;
