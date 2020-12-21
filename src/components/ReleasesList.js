@@ -1,5 +1,6 @@
 import React from "react";
 import {Link} from "gatsby";
+import Img from "gatsby-image";
 
 function Singlerelease({release}) {
   return (
@@ -9,6 +10,7 @@ function Singlerelease({release}) {
           <span className="mark">{release.name}</span>
         </h2>
         <p>{release.artists.map((info) => info.name)}</p>
+        <Img fluid={release.image.asset.fluid} alt={release.name} />
       </Link>
     </div>
   );

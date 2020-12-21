@@ -1,56 +1,44 @@
-import React from 'react';
+import React from "react";
 import {graphql} from "gatsby";
 import ReleasesList from "../components/ReleasesList";
 
 function releases({data}) {
-    const releases = data.releases.nodes
-    return (
-        <div>
-   <ReleasesList releases={releases}/>
-        </div>
-    );
+  const releases = data.releases.nodes;
+  return (
+    <div>
+      <ReleasesList releases={releases} />
+    </div>
+  );
 }
 
 export default releases;
 
-
-
-
-// import {graphql} from "gatsby";
-// import React from "react";
-// import ReleasesList from "../components/ReleasesList";
-
-// function releases({data }) {
-// console.log(data)
-//     //const releases = data.releases.nodes
-//   return <>
-//   <ReleasesList releases = {releases}/>
-//   </>
-// }
 export const query = graphql`
-query AllReleases {
+  query AllReleases {
     releases: allSanityRelease {
-    nodes {
-      id
-      name
-      slug {
-        current
-      }
-      artists {
+      nodes {
         id
         name
-      }
-      image {
-        asset {
-          fluid(maxWidth: 400) {
-            ...GatsbySanityImageFluid
+        slug {
+          current
+        }
+        artists {
+          id
+          name
+        }
+        image {
+          asset {
+            fixed(width: 200, height: 200) {
+              ...GatsbySanityImageFixed
+            }
+            fluid(maxWidth: 200) {
+              ...GatsbySanityImageFluid
+            }
           }
-          
         }
       }
     }
   }
-}
 `;
 
 // export default releases

@@ -1,7 +1,6 @@
-const dotenv = require ('dotenv')
+const dotenv = require("dotenv");
 
-dotenv.config({path: 'env'})
-
+dotenv.config({path: "env"});
 
 module.exports = {
   siteMetadata: {
@@ -19,6 +18,7 @@ module.exports = {
         token: process.env.SANITY_TOKEN,
       },
     },
+    "gatsby-plugin-sass",
     "gatsby-plugin-styled-components",
     "gatsby-plugin-sharp",
     "gatsby-transformer-sharp",
