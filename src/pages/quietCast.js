@@ -1,3 +1,4 @@
+/* eslint-disable */
 import {graphql} from "gatsby";
 import React, {useState, useRef} from "react";
 import "../styles/app.scss";

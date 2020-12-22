@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React from "react";
 import Img from "gatsby-image";
 
@@ -32,6 +33,8 @@ function LibrarySong({
     <div
       className={`library-song ${song.active ? "selected" : ""}`}
       onClick={songSelectHandler}
+      onKeyDown={null}
+      
     >
       <Img
          fluid={song.cover.asset.fluid}
