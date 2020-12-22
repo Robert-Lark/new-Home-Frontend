@@ -11,11 +11,12 @@ import Interview from "../musicPlayer/Interview";
 import {playAudio} from "../musicPlayer/util";
 
 function QuietCast({data}) {
+  console.log(data.content.nodes[1]);
   //Import data
   function mixData(content) {
     return content.map((mix) => ({
       name: mix.name,
-      cover: mix.image.asset.fluid,
+      cover: mix.cover.asset.fluid,
       artist: mix.artist,
       audio: mix.audio.asset.url,
       color: mix.color,
@@ -26,7 +27,6 @@ function QuietCast({data}) {
   }
   //Ref
   const audioRef = useRef(null);
-  console.log(mixData(data.content.nodes));
   const [songs, setSongs] = useState(mixData(data.content.nodes));
   const [currentSong, setCurrentSong] = useState(songs[0]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -87,13 +87,12 @@ function QuietCast({data}) {
         onLoadedMetadata={timeUpdateHandler}
         onTimeUpdate={timeUpdateHandler}
         ref={audioRef}
-        src={currentSong.audio}
+        src={currentSong.audio.asset.url}
         onEnded={songEndHandler}
       ></audio>
     </div>
   );
 }
-
 export default QuietCast;
 
 export const query = graphql`
@@ -111,6 +110,7 @@ export const query = graphql`
             url
           }
         }
+        tracklist
         description
         answer1
         answer10
@@ -169,12 +169,12 @@ export const query = graphql`
         style7
         style8
         style9
-        image {
+        imageOfArtist {
           asset {
             fixed(width: 200, height: 200) {
               ...GatsbySanityImageFixed
             }
-            fluid(maxWidth: 100) {
+            fluid(maxWidth: 1000) {
               ...GatsbySanityImageFluid
             }
           }
@@ -319,6 +319,13 @@ export const query = graphql`
             }
           }
         }
+        albumArt {
+        asset {
+          fluid(maxHeight: 1000){
+            ...GatsbySanityImageFluid
+          }
+        }
+      }
       }
     }
   }

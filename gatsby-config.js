@@ -18,6 +18,13 @@ module.exports = {
         token: process.env.SANITY_TOKEN,
       },
     },
+    {
+      resolve: `gatsby-plugin-google-fonts`,
+      options: {
+        fonts: [`Raleway\:300`, `Source Code Pro\:200`],
+        display: "swap",
+      },
+    },
     "gatsby-plugin-sass",
     "gatsby-plugin-styled-components",
     "gatsby-plugin-sharp",
