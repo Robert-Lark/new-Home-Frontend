@@ -34,7 +34,7 @@ function LibrarySong({
       onClick={songSelectHandler}
     >
       <Img
-        fluid={song.cover}
+         fluid={song.cover.asset.fluid}
         alt={song.name}
         style={{width: "100%", borderRadius: "50%"}}
       />

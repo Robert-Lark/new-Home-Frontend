@@ -6,6 +6,7 @@ import Player from "../musicPlayer/Player";
 import Song from "../musicPlayer/Song";
 import Library from "../musicPlayer/library";
 import Nav from "../musicPlayer/Nav";
+import Interview from "../musicPlayer/Interview";
 //Util
 import {playAudio} from "../musicPlayer/util";
 
@@ -20,12 +21,12 @@ function QuietCast({data}) {
       color: mix.color,
       id: mix.id,
       active: mix.active,
+      ...mix,
     }));
   }
-  console.log(data.content.nodes[0]);
   //Ref
   const audioRef = useRef(null);
-
+  console.log(mixData(data.content.nodes));
   const [songs, setSongs] = useState(mixData(data.content.nodes));
   const [currentSong, setCurrentSong] = useState(songs[0]);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -81,6 +82,7 @@ function QuietCast({data}) {
         setSongs={setSongs}
         libraryStatus={libraryStatus}
       />
+      <Interview current={currentSong} />
       <audio
         onLoadedMetadata={timeUpdateHandler}
         onTimeUpdate={timeUpdateHandler}
@@ -172,7 +174,147 @@ export const query = graphql`
             fixed(width: 200, height: 200) {
               ...GatsbySanityImageFixed
             }
-            fluid(maxWidth: 200) {
+            fluid(maxWidth: 100) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        cover {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i1 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i2 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i3 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i4 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i5 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i6 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i7 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i8 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i9 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i10 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i11 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i12 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i13 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i14 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i15 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i16 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i17 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i18 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        i19 {
+          asset {
+            fluid(maxWidth: 1000) {
               ...GatsbySanityImageFluid
             }
           }
