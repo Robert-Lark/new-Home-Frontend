@@ -1,9 +1,10 @@
-import React from "react";
+import React, {useState} from "react";
+import {Link} from "gatsby-plugin-modal-routing";
 import {graphql} from "gatsby";
 import Img from "gatsby-image";
 import styled from "styled-components";
 
-function topten({data}) {
+function Topten({data}) {
   const content = data.topTen.nodes;
   console.log(content);
   return (
@@ -12,40 +13,53 @@ function topten({data}) {
         <StyledGrid key={content.id}>
           <StyledYear>{content.year}</StyledYear>
           <StyledDescription>{content.description}</StyledDescription>
-          <StyledTen>
-            <Img fluid={content.i1.asset.fluid} alt={content.title1} />
-            <h4>{content.artist}</h4>
-          <h4>{content.title}</h4>
-          <h4>{content.label}</h4>
-          </StyledTen>
-          <StyledNine>
+          <Link
+            to="/modal"
+            asModal
+            state={{
+              modal: true,
+            //   img: content.i1.asset.fluid,
+            //   title: content.title1,
+            //   url: content.url1,
+            //   info: content.info1
+            }}
+
+          >
+            <StyledTopRow>
+              <Img fluid={content.i1.asset.fluid} alt={content.title1} />
+              <h2>{content.artist1}</h2>
+              <h3>{content.title1}</h3>
+              <h3>{content.label1}</h3>
+            </StyledTopRow>
+          </Link>
+          <StyledTopRow>
             <Img
               fluid={content.i2.asset.fluid}
               alt={content.title1}
               style={{height: "100%"}}
             />
-          </StyledNine>
-          <StyledEight>
+          </StyledTopRow>
+          <StyledTopRow>
             <Img
               fluid={content.i3.asset.fluid}
               alt={content.title1}
               style={{height: "100%"}}
             />
-          </StyledEight>
-          <StyledSeven>
+          </StyledTopRow>
+          <StyledTopRow>
             <Img
               fluid={content.i4.asset.fluid}
               alt={content.title1}
               style={{height: "100%"}}
             />
-          </StyledSeven>
-          <StyledSix>
+          </StyledTopRow>
+          <StyledTopRow>
             <Img
               fluid={content.i5.asset.fluid}
               alt={content.title1}
               style={{height: "100%"}}
             />
-          </StyledSix>
+          </StyledTopRow>
           <StyledFive>
             <Img fluid={content.i6.asset.fluid} alt={content.title1} />
           </StyledFive>
@@ -67,7 +81,9 @@ function topten({data}) {
   );
 }
 
-export default topten;
+export default Topten;
+
+//MODAL
 
 const StyledGrid = styled.div`
   display: grid;
@@ -78,7 +94,7 @@ const StyledGrid = styled.div`
 `;
 const StyledYear = styled.div`
   margin: 0 10% 0 10%;
-  padding: 5% 10% 5% 10%;
+  padding: 5% 10% 0% 10%;
   border: none;
   text-align: center;
   font-family: "Cormorant Garamond", serif;
@@ -86,30 +102,15 @@ const StyledYear = styled.div`
   grid-column: span 5;
 `;
 const StyledDescription = styled.div`
-  margin: 0 10% 0 10%;
-  padding: 5% 10% 5% 10%;
+  margin: 0 10% 2% 10%;
+  padding: 5% 5% 5% 5%;
   grid-column: span 5;
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 0.5px solid gold;
   border-radius: 20px;
+  font-size: 1.5rem;
 `;
-const StyledTen = styled.div`
-  box-shadow: 0px 0px 10px 4px #e0e0e0;
-  border: 1px solid gold;
-`;
-const StyledNine = styled.div`
-  box-shadow: 0px 0px 10px 4px #e0e0e0;
-  border: 1px solid gold;
-`;
-const StyledEight = styled.div`
-  box-shadow: 0px 0px 10px 4px #e0e0e0;
-  border: 1px solid gold;
-`;
-const StyledSeven = styled.div`
-  box-shadow: 0px 0px 10px 4px #e0e0e0;
-  border: 1px solid gold;
-`;
-const StyledSix = styled.div`
+const StyledTopRow = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
 `;
