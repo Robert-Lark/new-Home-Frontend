@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React from "react";
 import {Link} from "gatsby-plugin-modal-routing";
 import {graphql} from "gatsby";
 import Img from "gatsby-image";
@@ -18,12 +18,11 @@ function Topten({data}) {
             asModal
             state={{
               modal: true,
-            //   img: content.i1.asset.fluid,
-            //   title: content.title1,
-            //   url: content.url1,
-            //   info: content.info1
+              img: content.i1.asset.fluid,
+              title: content.title1,
+              url: content.url1,
+              info: content.info1,
             }}
-
           >
             <StyledTopRow>
               <Img fluid={content.i1.asset.fluid} alt={content.title1} />
