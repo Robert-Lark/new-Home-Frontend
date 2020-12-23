@@ -8,7 +8,7 @@ function Topten({data}) {
   const content = data.topTen.nodes;
   console.log(content);
   return (
-    <div>
+    <div style={{padding: "20px"}}>
       {content.map((content) => (
         <StyledGrid key={content.id}>
           <StyledYear>{content.year}</StyledYear>
