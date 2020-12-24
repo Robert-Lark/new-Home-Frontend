@@ -5,7 +5,7 @@ import "../styles/app.scss";
 //Import Components
 import Player from "../components/Player";
 import Song from "../components/Song";
-import Library from "../components/library";
+import Library from "../components/Library";
 import Nav from "../components/Nav";
 import Interview from "../components/Interview";
 //Util
