@@ -3,13 +3,13 @@ import {graphql} from "gatsby";
 import React, {useState, useRef} from "react";
 import "../styles/app.scss";
 //Import Components
-import Player from "../musicPlayer/Player";
-import Song from "../musicPlayer/Song";
-import Library from "../musicPlayer/library";
-import Nav from "../musicPlayer/Nav";
-import Interview from "../musicPlayer/Interview";
+import Player from "../components/Player";
+import Song from "../components/Song";
+import Library from "../components/library";
+import Nav from "../components/Nav";
+import Interview from "../components/Interview";
 //Util
-import {playAudio} from "../musicPlayer/util";
+import {playAudio} from "../components/util";
 
 function QuietCast({data}) {
   console.log(data.content.nodes[1]);
