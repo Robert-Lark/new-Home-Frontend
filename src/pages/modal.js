@@ -2,10 +2,11 @@ import React from "react";
 import styled from "styled-components";
 import Img from "gatsby-image";
 import ReactPlayer from "react-player";
-//import icon from '../images/icon.png'
+import { useBreakpoint } from 'gatsby-plugin-breakpoints';
 
 function Modal({location}) {
   const { state = {} } = location
+  const breakpoints = useBreakpoint();
   return (
     <StyledContainer>
       <StyledGrid>
@@ -19,9 +20,17 @@ function Modal({location}) {
           <h2>{state.info}</h2>
         </StyledInfo>
         <StyledVideo>
-          <div>
-            <ReactPlayer wrapper="div" url={state.url} width="260px" height="160px" style={{marginBottom: "-90%"}}/>
-          </div>
+        {breakpoints.xs ? <div>
+            <ReactPlayer wrapper="div" url={state.url} width="197px" height="120px" style={{marginBottom: "-90%"}}/>
+          </div> : breakpoints.sm ? <div>
+            <ReactPlayer wrapper="div" url={state.url} width="250px" height="160px" style={{marginBottom: "-90%"}}/>
+          </div> : breakpoints.md ? <div>
+            <ReactPlayer wrapper="div" url={state.url} width="250px" height="160px" style={{marginBottom: "-90%"}}/>
+          </div> : breakpoints.l ? <div>
+            <ReactPlayer wrapper="div" url={state.url} width="250px" height="160px" style={{marginBottom: "-90%"}}/>
+          </div>: <div>
+            <ReactPlayer wrapper="div" url={state.url}/>
+          </div>}
         </StyledVideo>
       </StyledGrid>
     </StyledContainer>
@@ -46,6 +55,9 @@ const StyledContainer = styled.div`
     box-sizing: border-box;
     overflow: hidden;
   }
+  @media (max-width: 320px) {
+    margin-top: -50%;
+  }
 `;
 
 const StyledGrid = styled.div`
@@ -59,6 +71,9 @@ const StyledGrid = styled.div`
   @media (max-width: 767px) {
     grid-template-columns: 1;
     grid-template-rows: 3;
+  }
+  @media (max-width: 320px) {
+    
   }
 `;
 
@@ -94,6 +109,17 @@ const StyledInfo = styled.div`
     grid-column: 1;
     grid-row: 2;
     width: 250px;
+  }  
+  @media (max-width: 320px) {
+    width: 75%;
+    margin-left: 7%;
+    h1 {
+      text-align: center;
+      font-size: .5rem;
+    }
+    h2 {      
+      text-align: center;
+    }
   }
 `;
 const StyledVideo = styled.div`
@@ -123,5 +149,8 @@ const StyledCover = styled.div`
     width: 100px;
     box-shadow: 0px 0px 10px 4px #e0e0e0;
     border: 1px solid gold;
+  }
+  @media (max-width: 320px) {
+   margin-left:20%; 
   }
 `;

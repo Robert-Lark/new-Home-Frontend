@@ -44,6 +44,7 @@ module.exports = {
     "gatsby-plugin-sass",
     "gatsby-plugin-styled-components",
     "gatsby-plugin-sharp",
+    'gatsby-plugin-breakpoints',
     {
       resolve: "gatsby-source-filesystem",
       options: {
