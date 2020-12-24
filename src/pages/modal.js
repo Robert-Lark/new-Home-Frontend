@@ -2,25 +2,25 @@ import React from "react";
 import styled from "styled-components";
 import Img from "gatsby-image";
 import ReactPlayer from "react-player";
-import icon from '../images/icon.png'
+//import icon from '../images/icon.png'
 
 function Modal({location}) {
-  const content = location.state;
+  const { state = {} } = location
   return (
     <StyledContainer>
       <StyledGrid>
         <StyledCover>
-          <Img fluid={content.img || icon} alt={content.title}  />
+          <Img fluid={state.img} alt={state.title}  />
         </StyledCover>
         <StyledInfo>
-          <h1>{content.artist}</h1>
-          <h1>{content.title}</h1>
-          <h1>{content.label}</h1>
-          <h2>{content.info}</h2>
+          <h1>{state.artist}</h1>
+          <h1>{state.title}</h1>
+          <h1>{state.label}</h1>
+          <h2>{state.info}</h2>
         </StyledInfo>
         <StyledVideo>
           <div>
-            <ReactPlayer wrapper="div" url={content.url} />
+            <ReactPlayer wrapper="div" url={state.url} />
           </div>
         </StyledVideo>
       </StyledGrid>
