@@ -7,7 +7,7 @@ import styled from "styled-components";
 function Topten({data}) {
   const content = data.topTen.nodes[0];
   return (
-    <div style={{padding: "20px"}}>
+    <StyledContainerDiv>
 
         <StyledGrid key={content.id}>
           <StyledYear>{content.year}</StyledYear>
@@ -77,13 +77,20 @@ function Topten({data}) {
           </StyledFirst>
         </StyledGrid>
 
-    </div>
+    </StyledContainerDiv>
   );
 }
 
 export default Topten;
 
 //MODAL
+
+const StyledContainerDiv = styled.div`
+  padding: 40px;
+  @media (max-width: 400px) {
+   padding: 0px;
+  }
+`;
 
 const StyledGrid = styled.div`
   display: grid;

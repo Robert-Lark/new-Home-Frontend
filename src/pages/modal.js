@@ -20,7 +20,7 @@ function Modal({location}) {
         </StyledInfo>
         <StyledVideo>
           <div>
-            <ReactPlayer wrapper="div" url={state.url} />
+            <ReactPlayer wrapper="div" url={state.url} width="260px" height="160px" style={{marginBottom: "-90%"}}/>
           </div>
         </StyledVideo>
       </StyledGrid>
@@ -41,7 +41,7 @@ const StyledContainer = styled.div`
     margin-top: 70px;
   }
   @media (max-width: 400px) {
-    margin-top: -80px;
+    margin-top: -180px;
     display: grid;
     box-sizing: border-box;
     overflow: hidden;
@@ -93,7 +93,7 @@ const StyledInfo = styled.div`
     }
     grid-column: 1;
     grid-row: 2;
-    width: 270px;
+    width: 250px;
   }
 `;
 const StyledVideo = styled.div`
