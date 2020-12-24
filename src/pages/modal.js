@@ -71,6 +71,7 @@ const StyledGrid = styled.div`
   @media (max-width: 767px) {
     grid-template-columns: 1;
     grid-template-rows: 3;
+    border: 5px solid black;
   }
   @media (max-width: 320px) {
     
