@@ -5,6 +5,7 @@ import ReactPlayer from "react-player";
 
 function Modal({location}) {
   const content = location.state;
+  console.log(content)
   return (
     <StyledContainer>
       <StyledGrid>
