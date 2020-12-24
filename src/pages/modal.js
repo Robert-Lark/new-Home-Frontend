@@ -70,7 +70,7 @@ const StyledGrid = styled.div`
   @media (max-width: 767px) {
     grid-template-columns: 1;
     grid-template-rows: 3;
-    border: 4px solid black;
+    
   }
   @media (max-width: 320px) {
     
@@ -109,7 +109,7 @@ const StyledInfo = styled.div`
     grid-column: 1;
     grid-row: 2;
     width: 250px;
-border: 2px solid red;
+
   }  
   @media (max-width: 320px) {
     width: 75%;
@@ -149,7 +149,7 @@ const StyledCover = styled.div`
     margin-left: 80px;
     width: 100px;
     box-shadow: 0px 0px 10px 4px #e0e0e0;
-    border: 1px solid gold;
+    
   }
   @media (max-width: 320px) {
    margin-left:20%; 
