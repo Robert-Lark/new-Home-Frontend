@@ -50,10 +50,9 @@ const StyledContainer = styled.div`
     margin-top: 70px;
   }
   @media (max-width: 767px) {
-    margin-top: -180px;
-    display: grid;
-    box-sizing: border-box;
-    overflow: hidden;
+    margin-top: 0px;
+
+    
   }
   @media (max-width: 320px) {
     margin-top: -50%;
@@ -71,6 +70,7 @@ const StyledGrid = styled.div`
   @media (max-width: 767px) {
     grid-template-columns: 1;
     grid-template-rows: 3;
+    border: 4px solid black;
   }
   @media (max-width: 320px) {
     
@@ -109,6 +109,7 @@ const StyledInfo = styled.div`
     grid-column: 1;
     grid-row: 2;
     width: 250px;
+border: 2px solid red;
   }  
   @media (max-width: 320px) {
     width: 75%;
