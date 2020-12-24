@@ -42,15 +42,14 @@ function Modal({location}) {
               />
             </div>
           ) : breakpoints.md ? (
-            <div>
+
               <ReactPlayer
-                wrapper="div"
+      
                 url={state.url}
-                width="250px"
-                height="160px"
+                width="100%"
                 style={{marginBottom: "-90%"}}
               />
-            </div>
+ 
           ) : breakpoints.l ? (
   
               <ReactPlayer
@@ -84,6 +83,9 @@ const StyledContainer = styled.div`
   @media (max-width: 1400px) {
     margin-top: 70px;
     overflow: visible;
+  }
+  @media (max-width: 1100px) {
+    margin-top: 170px;
   }
   @media (max-width: 767px) {
     margin-top: 0px;
@@ -163,6 +165,9 @@ const StyledVideo = styled.div`
   div {
     @media (max-width: 1400px) {
       width: 100px;
+    }
+    @media (max-width: 1100px) {
+margin-top: -400px;
     }
     @media (max-width: 767px) {
       grid-column: 1;
