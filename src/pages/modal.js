@@ -40,7 +40,7 @@ const StyledContainer = styled.div`
   @media (max-width: 1400px) {
     margin-top: 70px;
   }
-  @media (max-width: 400px) {
+  @media (max-width: 600px) {
     margin-top: -180px;
     display: grid;
     box-sizing: border-box;
@@ -56,7 +56,7 @@ const StyledGrid = styled.div`
   @media (max-width: 1400px) {
     padding-top: 90px;
   }
-  @media (max-width: 400px) {
+  @media (max-width: 600px) {
     grid-template-columns: 1;
     grid-template-rows: 3;
   }
@@ -81,7 +81,7 @@ const StyledInfo = styled.div`
       font-size: 1rem;
     }
   }
-  @media (max-width: 400px) {
+  @media (max-width: 600px) {
     margin-top: -10px;
     h1 {
       text-align: center;
@@ -101,7 +101,7 @@ const StyledVideo = styled.div`
     @media (max-width: 1400px) {
       width: 100px;
     }
-    @media (max-width: 400px) {
+    @media (max-width: 600px) {
       grid-column: 1;
       grid-row: 3;
       margin-top: -70px;
@@ -116,7 +116,7 @@ const StyledCover = styled.div`
     box-shadow: none;
     grid-row: span 2;
   }
-  @media (max-width: 400px) {
+  @media (max-width: 600px) {
     grid-column: 1;
     grid-row: 1;
     margin-left: 80px;
