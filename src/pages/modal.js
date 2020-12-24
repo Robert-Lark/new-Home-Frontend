@@ -77,18 +77,21 @@ const StyledContainer = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: -40px;
+  margin-top: 90px;
   height: 100vh;
   padding: 0 20px 0 20px;
   @media (max-width: 1400px) {
-    margin-top: 70px;
+    margin-top: -60px;
     overflow: visible;
   }
   @media (max-width: 1100px) {
-    margin-top: 170px;
+    margin-top: -100px;
+  }
+  @media (max-width: 950px) {
+    margin-top: -50px;
   }
   @media (max-width: 767px) {
-    margin-top: 0px;
+    margin-top: -100px;
 
   }
   @media (max-width: 320px) {
@@ -136,6 +139,8 @@ const StyledInfo = styled.div`
     }
   }
   @media (max-width: 767px) {
+    margin-left: 0px;
+    text-align: center;
     margin-top: -10px;
     h1 {
       text-align: center;
@@ -193,6 +198,6 @@ const StyledCover = styled.div`
     margin-left: 31%;
   }
   @media (max-width: 320px) {
-    margin-left: 20%;
+    margin-left: 22%;
   }
 `;
