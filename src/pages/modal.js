@@ -2,15 +2,15 @@ import React from "react";
 import styled from "styled-components";
 import Img from "gatsby-image";
 import ReactPlayer from "react-player";
+import icon from '../images/icon.png'
 
 function Modal({location}) {
   const content = location.state;
-  console.log(content)
   return (
     <StyledContainer>
       <StyledGrid>
         <StyledCover>
-          <Img fluid={content.img} alt={content.title} />
+          <Img fluid={content.img || icon} alt={content.title}  />
         </StyledCover>
         <StyledInfo>
           <h1>{content.artist}</h1>
@@ -58,7 +58,7 @@ const StyledGrid = styled.div`
   }
   @media (max-width: 400px) {
     grid-template-columns: 1;
-  grid-template-rows: 3;
+    grid-template-rows: 3;
   }
 `;
 
@@ -88,7 +88,7 @@ const StyledInfo = styled.div`
       font-size: 1rem;
     }
     h2 {
-      margin:10px 0px;
+      margin: 10px 0px;
       font-size: 0.3rem;
     }
     grid-column: 1;
@@ -102,10 +102,10 @@ const StyledVideo = styled.div`
       width: 100px;
     }
     @media (max-width: 400px) {
-    grid-column: 1;
-    grid-row: 3;
-    margin-top: -70px;
-  }
+      grid-column: 1;
+      grid-row: 3;
+      margin-top: -70px;
+    }
   }
 `;
 const StyledCover = styled.div`
@@ -119,9 +119,9 @@ const StyledCover = styled.div`
   @media (max-width: 400px) {
     grid-column: 1;
     grid-row: 1;
-  margin-left: 80px;
+    margin-left: 80px;
     width: 100px;
     box-shadow: 0px 0px 10px 4px #e0e0e0;
-  border: 1px solid gold;
+    border: 1px solid gold;
   }
 `;

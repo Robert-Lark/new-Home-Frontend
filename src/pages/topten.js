@@ -5,11 +5,10 @@ import Img from "gatsby-image";
 import styled from "styled-components";
 
 function Topten({data}) {
-  const content = data.topTen.nodes;
-  console.log(content);
+  const content = data.topTen.nodes[0];
   return (
     <div style={{padding: "20px"}}>
-      {content.map((content) => (
+
         <StyledGrid key={content.id}>
           <StyledYear>{content.year}</StyledYear>
           <StyledDescription>{content.description}</StyledDescription>
@@ -77,7 +76,7 @@ function Topten({data}) {
             <Img fluid={content.i10.asset.fluid} alt={content.title1} />
           </StyledFirst>
         </StyledGrid>
-      ))}
+
     </div>
   );
 }
