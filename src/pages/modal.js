@@ -2,16 +2,17 @@ import React from "react";
 import styled from "styled-components";
 import Img from "gatsby-image";
 import ReactPlayer from "react-player";
-import { useBreakpoint } from 'gatsby-plugin-breakpoints';
+import {useBreakpoint} from "gatsby-plugin-breakpoints";
+import { getFixedGatsbyImage } from "gatsby-source-sanity";
 
 function Modal({location}) {
-  const { state = {} } = location
+  const {state = {}} = location;
   const breakpoints = useBreakpoint();
   return (
     <StyledContainer>
       <StyledGrid>
         <StyledCover>
-          <Img fluid={state.img} alt={state.title}  />
+          <Img fluid={state.img} alt={state.title} />
         </StyledCover>
         <StyledInfo>
           <h1>{state.artist}</h1>
@@ -20,17 +21,51 @@ function Modal({location}) {
           <h2>{state.info}</h2>
         </StyledInfo>
         <StyledVideo>
-        {breakpoints.xs ? <div>
-            <ReactPlayer wrapper="div" url={state.url} width="197px" height="120px" style={{marginBottom: "-90%"}}/>
-          </div> : breakpoints.sm ? <div>
-            <ReactPlayer wrapper="div" url={state.url} width="250px" height="160px" style={{marginBottom: "-90%"}}/>
-          </div> : breakpoints.md ? <div>
-            <ReactPlayer wrapper="div" url={state.url} width="250px" height="160px" style={{marginBottom: "-90%"}}/>
-          </div> : breakpoints.l ? <div>
-            <ReactPlayer wrapper="div" url={state.url} width="250px" height="160px" style={{marginBottom: "-90%"}}/>
-          </div>: <div>
-            <ReactPlayer wrapper="div" url={state.url}/>
-          </div>}
+          {breakpoints.xs ? (
+            <div>
+              <ReactPlayer
+                wrapper="div"
+                url={state.url}
+                width="197px"
+                height="120px"
+                style={{marginBottom: "-90%"}}
+              />
+            </div>
+          ) : breakpoints.sm ? (
+            <div>
+              <ReactPlayer
+                wrapper="div"
+                url={state.url}
+                width="250px"
+                height="160px"
+                style={{marginBottom: "-90%"}}
+              />
+            </div>
+          ) : breakpoints.md ? (
+            <div>
+              <ReactPlayer
+                wrapper="div"
+                url={state.url}
+                width="250px"
+                height="160px"
+                style={{marginBottom: "-90%"}}
+              />
+            </div>
+          ) : breakpoints.l ? (
+  
+              <ReactPlayer
+
+                url={state.url}
+                width="100%"
+                // height="270px"
+                style={{marginTop: "-35%"}}
+              />
+
+          ) : (
+            <div>
+              <ReactPlayer wrapper="div" url={state.url} />
+            </div>
+          )}
         </StyledVideo>
       </StyledGrid>
     </StyledContainer>
@@ -48,11 +83,11 @@ const StyledContainer = styled.div`
   padding: 0 20px 0 20px;
   @media (max-width: 1400px) {
     margin-top: 70px;
+    overflow: visible;
   }
   @media (max-width: 767px) {
     margin-top: 0px;
 
-    
   }
   @media (max-width: 320px) {
     margin-top: -50%;
@@ -66,14 +101,16 @@ const StyledGrid = styled.div`
   gap: 25px;
   @media (max-width: 1400px) {
     padding-top: 90px;
+margin-top: 150px
   }
   @media (max-width: 767px) {
     grid-template-columns: 1;
     grid-template-rows: 3;
-    
+    margin-top: -100px
   }
   @media (max-width: 320px) {
-    
+    margin-top: 300px;
+    margin-right: -20px;
   }
 `;
 
@@ -109,16 +146,15 @@ const StyledInfo = styled.div`
     grid-column: 1;
     grid-row: 2;
     width: 250px;
-
-  }  
+  }
   @media (max-width: 320px) {
     width: 75%;
     margin-left: 7%;
     h1 {
       text-align: center;
-      font-size: .5rem;
+      font-size: 0.5rem;
     }
-    h2 {      
+    h2 {
       text-align: center;
     }
   }
@@ -149,9 +185,9 @@ const StyledCover = styled.div`
     margin-left: 80px;
     width: 100px;
     box-shadow: 0px 0px 10px 4px #e0e0e0;
-    
+    margin-left: 31%;
   }
   @media (max-width: 320px) {
-   margin-left:20%; 
+    margin-left: 20%;
   }
 `;
