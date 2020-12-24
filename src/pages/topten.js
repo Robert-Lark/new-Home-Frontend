@@ -17,7 +17,7 @@ function Topten({data}) {
             asModal
             state={{
               noScroll: true,
-              modal: true,
+              //modal: true,
               img: content.i1.asset.fluid,
               title: content.title1,
               label: content.label1,
