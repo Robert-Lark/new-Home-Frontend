@@ -20,8 +20,10 @@ function Topten({data}) {
               modal: true,
               img: content.i1.asset.fluid,
               title: content.title1,
+              label: content.label1,
+              artist: content.artist1,
               url: content.url1,
-              info: content.info1,
+              info: content.description1,
             }}
           >
             <StyledTopRow>
@@ -90,6 +92,10 @@ const StyledGrid = styled.div`
   grid-gap: 20px;
   div {
   }
+  @media (max-width: 400px) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, 300px);
+  }
 `;
 const StyledYear = styled.div`
   margin: 0 10% 0 10%;
@@ -99,6 +105,12 @@ const StyledYear = styled.div`
   font-family: "Cormorant Garamond", serif;
   font-size: 5rem;
   grid-column: span 5;
+  @media (max-width: 1375px) {
+    font-size: 3.5rem;
+  }
+  @media (max-width: 1000px) {
+    font-size: 3rem;
+  }
 `;
 const StyledDescription = styled.div`
   margin: 0 10% 2% 10%;
@@ -112,31 +124,79 @@ const StyledDescription = styled.div`
 const StyledTopRow = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
+  @media (max-width: 1000px) {
+    text-align: center;
+  font-size: 1rem;
+  }
+  @media (max-width: 400px) {
+    grid-column: 1 / span 1;
+    margin-left: 80px;
+  }
 `;
 const StyledFive = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
   grid-column: 1 / span 2;
+  @media (max-width: 1000px) {
+    text-align: center;
+  font-size: 1rem;
+  }
+  @media (max-width: 400px) {
+    grid-column: 1 / span 1;
+    margin-left: 80px;
+  }
 `;
 const StyledFour = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
   grid-column: 4 / span 2;
+  @media (max-width: 1000px) {
+    text-align: center;
+  font-size: 1rem;
+  }
+  @media (max-width: 400px) {
+    grid-column: 1 / span 1;
+    margin-left: 80px;
+  }
 `;
 const StyledThree = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
   grid-column: 2 / span 3;
+  @media (max-width: 1000px) {
+    text-align: center;
+  font-size: 2rem;
+  }
+  @media (max-width: 400px) {
+    grid-column: 1 / span 1;
+    margin-left: 80px;
+  }
 `;
 const StyledSecond = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
   grid-column: 2 / span 3;
+  @media (max-width: 1000px) {
+    text-align: center;
+  font-size: 2rem;
+  }
+  @media (max-width: 400px) {
+    grid-column: 1 / span 1;
+    margin-left: 80px;
+  }
 `;
 const StyledFirst = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
   grid-column: span 5;
+  @media (max-width: 1000px) {
+    text-align: center;
+  font-size: 3rem;
+  }
+  @media (max-width: 400px) {
+    grid-column: 1 / span 1;
+    margin-right: -60px;
+  }
 `;
 
 export const query = graphql`
@@ -175,6 +235,16 @@ export const query = graphql`
         label8
         label9
         id
+        url1
+      url10
+      url2
+      url3
+      url4
+      url5
+      url6
+      url7
+      url8
+      url910
         title1
         title10
         title2

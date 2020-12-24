@@ -1,11 +1,10 @@
-import React from 'react';
+import React from "react";
 import styled from "styled-components";
 import Img from "gatsby-image";
 import ReactPlayer from "react-player";
 
-
 function Modal({location}) {
-const content = location.state
+  const content = location.state;
   return (
     <StyledContainer>
       <StyledGrid>
@@ -13,24 +12,16 @@ const content = location.state
           <Img fluid={content.img} alt={content.title} />
         </StyledCover>
         <StyledInfo>
-          <h2 wrapper="StyledInfo">
-            aspernatur ab eos, soluta, rerum dolorem, consequuntur voluptate.
-            Libero esse excepturi quis illum tempore, facere, voluptas
-            laboriosam, placeat atque quo dolorum obcaecati repellat expedita
-            eligendi officia distinctio omnis? Praesentium consequatur, eaque
-            suscipit totam nemo repudiandae sapiente, perspiciatis fugiat esse
-            quibusdam, est nesciunt animi. Provident nam, nihil animi sint rem
-            architecto error fugit alias necessitatibus esse consequatur cumque
-            maxime ipsum voluptatibus eius qui? Placeat, perspiciatis ipsam
-            tempora eum ducimus et quam.
-          </h2>
+          <h1>{content.artist}</h1>
+          <h1>{content.title}</h1>
+          <h1>{content.label}</h1>
+          <h2>{content.info}</h2>
         </StyledInfo>
-        <div>
-          <ReactPlayer
-            wrapper="div"
-            url="https://www.youtube.com/watch?v=ysz5S6PUM-U"
-          />
-        </div>
+        <StyledVideo>
+          <div>
+            <ReactPlayer wrapper="div" url={content.url} />
+          </div>
+        </StyledVideo>
       </StyledGrid>
     </StyledContainer>
   );
@@ -38,13 +29,22 @@ const content = location.state
 
 export default Modal;
 
-
 const StyledContainer = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 50px;
-  height: 80vh;
+  margin-top: -40px;
+  height: 100vh;
+  padding: 0 20px 0 20px;
+  @media (max-width: 1400px) {
+    margin-top: 70px;
+  }
+  @media (max-width: 400px) {
+    margin-top: -80px;
+    display: grid;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
 `;
 
 const StyledGrid = styled.div`
@@ -52,19 +52,75 @@ const StyledGrid = styled.div`
   grid-template-columns: 2;
   grid-template-rows: 4;
   gap: 25px;
+  @media (max-width: 1400px) {
+    padding-top: 90px;
+  }
+  @media (max-width: 400px) {
+    grid-template-columns: 1;
+  grid-template-rows: 3;
+  }
 `;
 
 const StyledInfo = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
-
+  margin-bottom: 50px;
   grid-column: 2;
   grid-row: span 4;
+  h2 {
+    font-family: "Source Code Pro", monospace;
+  }
+  @media (max-width: 1400px) {
+    width: 30vw;
+    grid-row: span 2;
+    box-shadow: none;
+    h1 {
+      font-size: 1rem;
+    }
+    h2 {
+      font-size: 1rem;
+    }
+  }
+  @media (max-width: 400px) {
+    margin-top: -10px;
+    h1 {
+      text-align: center;
+      font-size: 1rem;
+    }
+    h2 {
+      margin:10px 0px;
+      font-size: 0.3rem;
+    }
+    grid-column: 1;
+    grid-row: 2;
+    width: 270px;
+  }
+`;
+const StyledVideo = styled.div`
+  div {
+    @media (max-width: 1400px) {
+      width: 100px;
+    }
+    @media (max-width: 400px) {
+    grid-column: 1;
+    grid-row: 3;
+    margin-top: -70px;
+  }
+  }
 `;
 const StyledCover = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
 
-  grid-row: span 3;
+  @media (max-width: 1400px) {
+    width: 40vw;
+    box-shadow: none;
+    grid-row: span 2;
+  }
+  @media (max-width: 400px) {
+    grid-column: 1;
+    grid-row: 1;
+  margin-left: 80px;
+    width: 100px;
+    box-shadow: 0px 0px 10px 4px #e0e0e0;
+  border: 1px solid gold;
+  }
 `;
-
-
-
