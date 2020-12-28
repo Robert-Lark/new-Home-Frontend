@@ -10,7 +10,7 @@ import Nav from "../components/Nav";
 import Interview from "../components/Interview";
 //Util
 import {playAudio} from "../components/util";
-
+//DESTRUCTURE DATA 
 function QuietCast({data}) {
   console.log(data.content.nodes[1]);
   //Import data

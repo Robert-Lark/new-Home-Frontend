@@ -3,7 +3,7 @@ import {Link} from "gatsby-plugin-modal-routing";
 import {graphql} from "gatsby";
 import Img from "gatsby-image";
 import styled from "styled-components";
-
+// YOU CAN PROBABLY DESTRUCTURE CONTENT AND REPLACE DATA WITH NODES
 function Topten({data}) {
   const content = data.topTen.nodes[0];
   return (

@@ -17,8 +17,54 @@ nav {
 	}
 }
 
+@media screen and (max-width: 360px) {
+    nav {
+		border: 5px solid red;
+        button {
+            z-index: 10;
+            margin-right: 0px;
+            margin-top: -20px;
+            width: 20%;
+        }
+    }
+}
+@media screen and (max-width: 375px) {
+    nav {
+		border: 5px solid blue;
+        button {
+            z-index: 10;
+            margin-right: -40px;
+            margin-top: -20px;
+            width: 20%;
+        }
+    }
+}
+
 @media screen and (max-width: 768px) {
     nav {
+		border: 5px solid green;
+        button {
+            z-index: 10;
+            margin-right: -40px;
+            margin-top: -20px;
+            width: 20%;
+        }
+    }
+}
+@media screen and (max-width: 1366px) {
+    nav {
+		border: 5px solid orange;
+        button {
+            z-index: 10;
+            margin-right: -40px;
+            margin-top: -20px;
+            width: 20%;
+        }
+    }
+}
+@media screen and (max-width: 1920px) {
+    nav {
+		border: 5px solid grey;
         button {
             z-index: 10;
             margin-right: -40px;

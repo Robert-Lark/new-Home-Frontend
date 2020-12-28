@@ -3,7 +3,7 @@ import styled from "styled-components";
 import Img from "gatsby-image";
 import ReactPlayer from "react-player";
 import {useBreakpoint} from "gatsby-plugin-breakpoints";
-import { getFixedGatsbyImage } from "gatsby-source-sanity";
+// import { getFixedGatsbyImage } from "gatsby-source-sanity";
 
 function Modal({location}) {
   const {state = {}} = location;

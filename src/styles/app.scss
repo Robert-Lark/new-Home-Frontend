@@ -19,6 +19,9 @@ h4 {
 
 .App {
 transition: all 0.5s ease;
+@media screen and (max-width: 768px) {
+	margin: 50px;
+}
 }
 .library-active{
     margin-left: 30%;
