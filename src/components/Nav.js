@@ -6,7 +6,7 @@ const Nav = ({libraryStatus, setLibraryStatus }) => {
     return (
         <nav>
             <h1>Quiet Cast: Mixes & interviews from our favorite artists</h1>
-            <button onClick={() => setLibraryStatus(!libraryStatus)}>
+            <button onClick={() => setLibraryStatus(!libraryStatus)} className={`${libraryStatus ? "display" : ""}`}>
                 Library
                 <FontAwesomeIcon icon={faMusic}/>
             </button>

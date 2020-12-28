@@ -82,6 +82,7 @@ function QuietCast({data}) {
         isPlaying={isPlaying}
         setSongs={setSongs}
         libraryStatus={libraryStatus}
+				setLibraryStatus={setLibraryStatus}
       />
       <Interview current={currentSong} />
       <audio

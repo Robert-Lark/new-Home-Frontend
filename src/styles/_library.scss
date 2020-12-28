@@ -62,10 +62,31 @@ border: transparent;
 
 
 @media screen and (max-width: 768px) {
-    .library {
-        width: 100%;
-    }
-    .library-title {
-        display: none;
-    }
+
 }
+
+
+    @media screen and (max-width: 1920px) {
+
+
+      @media screen and (max-width: 1366px) {
+
+
+      }
+      @media screen and (max-width: 768px) {
+        .library {
+            width: 100%;
+        }
+        .library-title {
+            display: none;
+        }
+	  }
+	  @media screen and (max-width: 375px) {
+
+	
+	  }
+      @media screen and (max-width: 360px) {
+
+      
+      }
+    }
