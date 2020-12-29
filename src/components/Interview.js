@@ -231,12 +231,14 @@ const StyledInterviewGrid = styled.div`
         h4 {
           text-align: center;
           width: 85vw;
-          font-size: 2rem;
+          font-size: 1.5rem;
+          margin-top: 20px;
         }
         h5 {
           text-align: center;
           width: 85vw;
-          font-size: 2rem;
+          font-size: 1.5rem;
+          margin-bottom: 20px;
         }
         .image {
         }
