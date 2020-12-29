@@ -143,6 +143,9 @@ const StyledTracklistContainer = styled.div`
   }
 
   @media screen and (max-width: 360px) {
+	p {
+		font-size: 1rem;
+	}
   }
 `;
 const StyledArtistImage = styled.div`
