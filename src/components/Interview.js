@@ -119,8 +119,9 @@ function Interview({current}) {
 }
 
 const StyledContainer = styled.div`
-  margin: 0 10% 0 10%;
-  padding: 5% 10% 5% 10%;
+
+  /* margin: 0 10% 0 10%;
+  padding: 5% 10% 5% 10%; */
   @media screen and (max-width: 375px) {
     display: flex;
     flex-direction: column;
@@ -128,6 +129,7 @@ const StyledContainer = styled.div`
   }
 `;
 const StyledTracklistContainer = styled.div`
+
   text-align: center;
   p {
     font-family: "Source Code Pro", monospace;
@@ -135,13 +137,11 @@ const StyledTracklistContainer = styled.div`
   }
   @media screen and (max-width: 375px) {
     width: 100vw;
-
     margin-bottom: 100px;
     p {
       font-size: 30px;
     }
   }
-
   @media screen and (max-width: 360px) {
 	p {
 		font-size: 1rem;
@@ -149,31 +149,34 @@ const StyledTracklistContainer = styled.div`
   }
 `;
 const StyledArtistImage = styled.div`
+
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   margin: 5% 0 5% 0;
   @media screen and (max-width: 375px) {
-    width: 90vw;
-    margin-right: 5%;
-    margin-left: 10px;
+    width: 95vw;
+    /* margin-right: 5%;
+    margin-left: 10px; */
     margin-bottom: 40px;
   }
 `;
 const StyledAlbumArtGrid = styled.div`
+
   margin: 8% -30% 0 -30%;
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 20px;
   @media screen and (max-width: 375px) {
     width: 90vw;
-    margin: 8% 0% 0 5%;
-    margin-bottom: 40px;
+    //margin: 8% 0% 0 5%;
+    //margin-bottom: 40px;
   }
 `;
 const StyledHeader = styled.div`
+
   text-align: center;
   font-size: 5rem;
   font-family: "Source Code Pro", monospace;
-  margin: 10%;
+  //margin: 10%;
   @media screen and (max-width: 1920px) {
     @media screen and (max-width: 1366px) {
     }
@@ -182,7 +185,6 @@ const StyledHeader = styled.div`
     }
     @media screen and (max-width: 375px) {
       width: 100vw;
-
       margin-bottom: 40px;
     }
     @media screen and (max-width: 360px) {
@@ -208,8 +210,10 @@ const StyledDescription = styled.div`
   }
 `;
 const StyledInterviewGrid = styled.div`
+
+
   margin: 0 -30% 0 -30%;
-  padding: 5% 10% 5% 10%;
+  //padding: 5% 10% 5% 10%;
   font-size: 3rem;
   margin-top: 4rem;
   display: grid;

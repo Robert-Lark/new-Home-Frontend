@@ -3,14 +3,18 @@
     padding: 0;
     box-sizing: border-box;
 //border: 1px solid red;
-}
 
+}
+html {
+    width: 100vw;
+}
 h1,
 h2,
 h3 {
     color: rgb(54,54,54);
 }
 body {
+
     font-family: 'Josefin Slab', serif;
 }
 h3,
@@ -21,8 +25,15 @@ h4 {
 
 .App {
 transition: all 0.5s ease;
+
 @media screen and (max-width: 768px) {
 	margin: 50px;
+}
+@media screen and (max-width: 375px) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
 }
 }
 .library-active{
