@@ -6,9 +6,8 @@ function Song({currentSong}) {
     <div className="song-container">
       <Img
         fluid={currentSong.cover.asset.fluid}
-        style={{width: "30%", borderRadius: "50%"}}
         alt={currentSong.name}
-        placeholderClassName="cover"
+        className="image"
       />
       <h2>{currentSong.name}</h2>
     </div>

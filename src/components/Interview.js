@@ -145,7 +145,7 @@ const StyledHeader = styled.div`
     @media screen and (max-width: 1366px) {
     }
     @media screen and (max-width: 768px) {
-      font-size: 1rem;
+      font-size: 4rem;
     }
     @media screen and (max-width: 375px) {
     }
@@ -177,6 +177,11 @@ const StyledInterviewGrid = styled.div`
   display: grid;
   grid-template-columns: 2;
   gap: 4rem;
+  div {
+    display: flex;
+    flex-direction: row-reverse;
+    width: 500px;
+  }
   .image {
     width: 80vw;
     margin: 5%;
@@ -192,7 +197,7 @@ const StyledInterviewGrid = styled.div`
 display: flex;
 flex-direction: column;
 align-items: center;
-border: 4px solid red;
+margin: 10%;
 h4 {
   width: 85vw;
   font-size: 2rem;
@@ -215,12 +220,6 @@ width: 100%;
       }
     }
     }
-  }
-  div {
-    display: flex;
-    flex-direction: row-reverse;
-    width: 500px;
-  }
 `;
 
 export default Interview;

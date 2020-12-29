@@ -42,7 +42,7 @@ function LibrarySong({
       <Img
          fluid={song.cover.asset.fluid}
         alt={song.name}
-        style={{width: "100%", borderRadius: "50%"}}
+        className="image"
       />
     </div>
   );

@@ -4,7 +4,7 @@
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	img {
+	.image {
         width: 30%;
 		border-radius: 50%;
 	}
@@ -18,8 +18,8 @@
 
 @media screen and (max-width: 768px) {
 	.song-container {
-	.gatsby-image-wrapper {
-		width: 60%;
+	.image {
+		width: 80%;
 	}
 }
 }
