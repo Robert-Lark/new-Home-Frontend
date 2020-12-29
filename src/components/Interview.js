@@ -14,7 +14,11 @@ function Interview({current}) {
       </StyledTracklistContainer>
       <StyledAlbumArtGrid>
         {current.albumArt.map((art) => (
-          <Img fluid={art.asset.fluid} alt={current.name} style={{width: "100%", height: "80%"}} />
+          <Img
+            fluid={art.asset.fluid}
+            alt={current.name}
+            style={{width: "100%", height: "80%"}}
+          />
         ))}
       </StyledAlbumArtGrid>
       <StyledArtistImage>
@@ -26,50 +30,86 @@ function Interview({current}) {
         <h4>{current.question1}</h4>
         <h5>{current.answer1}</h5>
         <div>
-          <Img fluid={current.i1.asset.fluid} alt={current.name} className="image" />
+          <Img
+            fluid={current.i1.asset.fluid}
+            alt={current.name}
+            className="image"
+          />
         </div>
         <h4>{current.question2}</h4>
         <h5>{current.answer2}</h5>
         <h4>{current.question3}</h4>
         <h5>{current.answer3}</h5>
-        <Img fluid={current.i2.asset.fluid} alt={current.name} className="image"/>
+        <Img
+          fluid={current.i2.asset.fluid}
+          alt={current.name}
+          className="image"
+        />
         <h4>{current.question4}</h4>
         <h5>{current.answer4}</h5>
-        <Img fluid={current.i3.asset.fluid} alt={current.name} className="image"/>
+        <Img
+          fluid={current.i3.asset.fluid}
+          alt={current.name}
+          className="image"
+        />
         <h4>{current.question5}</h4>
         <h5>{current.answer5}</h5>
-        <Img fluid={current.i9.asset.fluid} alt={current.name} className="image"/>
+        <Img
+          fluid={current.i9.asset.fluid}
+          alt={current.name}
+          className="image"
+        />
         <h4>{current.question6}</h4>
         <h5>{current.answer6}</h5>
-        <Img fluid={current.i4.asset.fluid} alt={current.name} className="image"/>
+        <Img
+          fluid={current.i4.asset.fluid}
+          alt={current.name}
+          className="image"
+        />
         <h4>{current.question7}</h4>
         <h5>{current.answer7}</h5>
-        <Img fluid={current.i5.asset.fluid} alt={current.name} className="image"/>
+        <Img
+          fluid={current.i5.asset.fluid}
+          alt={current.name}
+          className="image"
+        />
         <h4>{current.question8}</h4>
         <h5>{current.answer8}</h5>
-        <Img fluid={current.i6.asset.fluid} alt={current.name} className="image"/>
+        <Img
+          fluid={current.i6.asset.fluid}
+          alt={current.name}
+          className="image"
+        />
         <h4>{current.question9}</h4>
         <h5>{current.answer9}</h5>
-        <Img fluid={current.i7.asset.fluid} alt={current.name} className="image"/>
+        <Img
+          fluid={current.i7.asset.fluid}
+          alt={current.name}
+          className="image"
+        />
         <h4>{current.question10}</h4>
         <h5>{current.answer10}</h5>
-        <Img fluid={current.i8.asset.fluid} alt={current.name} className="image"/>
+        <Img
+          fluid={current.i8.asset.fluid}
+          alt={current.name}
+          className="image"
+        />
         {/* <div style={current.i10 ? {display: "show"} : {display: "none"}}> */}
 
-          <h4>{current.question11}</h4>
-          <h5>{current.answer11}</h5>
+        <h4>{current.question11}</h4>
+        <h5>{current.answer11}</h5>
 
-          <h4>{current.question12}</h4>
-          <h5>{current.answer12}</h5>
+        <h4>{current.question12}</h4>
+        <h5>{current.answer12}</h5>
 
-          <h4>{current.question13}</h4>
-          <h5>{current.answer13}</h5>
+        <h4>{current.question13}</h4>
+        <h5>{current.answer13}</h5>
 
-          <h4>{current.question14}</h4>
-          <h5>{current.answer14}</h5>
+        <h4>{current.question14}</h4>
+        <h5>{current.answer14}</h5>
 
-          <h4>{current.question15}</h4>
-          <h5>{current.answer15}</h5>
+        <h4>{current.question15}</h4>
+        <h5>{current.answer15}</h5>
       </StyledInterviewGrid>
     </StyledContainer>
   );
@@ -102,50 +142,32 @@ const StyledHeader = styled.div`
   font-family: "Source Code Pro", monospace;
   margin: 10%;
   @media screen and (max-width: 1920px) {
-
-
-@media screen and (max-width: 1366px) {
-
-
-}
-@media screen and (max-width: 768px) {
-
-font-size: 1rem;
-
-}
-@media screen and (max-width: 375px) {
-
-
-}
-@media screen and (max-width: 360px) {
-
-
-}
-}
+    @media screen and (max-width: 1366px) {
+    }
+    @media screen and (max-width: 768px) {
+      font-size: 1rem;
+    }
+    @media screen and (max-width: 375px) {
+    }
+    @media screen and (max-width: 360px) {
+    }
+  }
 `;
 const StyledDescription = styled.div`
   font-size: 3rem;
   font-family: "Raleway", sans-serif;
   @media screen and (max-width: 1920px) {
-
-
-@media screen and (max-width: 1366px) {
-
-
-}
-@media screen and (max-width: 768px) {
-font-size: 1rem;
-text-align: center;
-}
-@media screen and (max-width: 375px) {
-
-
-}
-@media screen and (max-width: 360px) {
-
-
-}
-}
+    @media screen and (max-width: 1366px) {
+    }
+    @media screen and (max-width: 768px) {
+      font-size: 1rem;
+      text-align: center;
+    }
+    @media screen and (max-width: 375px) {
+    }
+    @media screen and (max-width: 360px) {
+    }
+  }
 `;
 const StyledInterviewGrid = styled.div`
   margin: 0 -30% 0 -30%;
@@ -157,6 +179,7 @@ const StyledInterviewGrid = styled.div`
   gap: 4rem;
   .image {
     width: 80vw;
+    margin: 5%;
   }
   @media screen and (max-width: 1920px) {
 
@@ -164,7 +187,7 @@ const StyledInterviewGrid = styled.div`
       @media screen and (max-width: 1366px) {
 
 
-      }
+      
       @media screen and (max-width: 768px) {
 display: flex;
 flex-direction: column;
@@ -190,12 +213,13 @@ width: 100%;
       
       }
     }
+    }
   }
   div {
     display: flex;
     flex-direction: row-reverse;
     width: 500px;
   }
-`
+`;
 
 export default Interview;
