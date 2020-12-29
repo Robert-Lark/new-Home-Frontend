@@ -192,6 +192,7 @@ const StyledInterviewGrid = styled.div`
 display: flex;
 flex-direction: column;
 align-items: center;
+border: 4px solid red;
 h4 {
   width: 85vw;
   font-size: 2rem;
