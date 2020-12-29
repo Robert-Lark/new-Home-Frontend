@@ -207,7 +207,7 @@ h5 {
   font-size: 2rem;
 }
 .image {
-width: 100%;
+
 }
 	  }
 	  @media screen and (max-width: 375px) {
