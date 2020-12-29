@@ -121,10 +121,6 @@ export const query = graphql`
         answer13
         answer14
         answer15
-        answer16
-        answer17
-        answer18
-        answer19
         answer2
         answer3
         answer4
@@ -140,10 +136,6 @@ export const query = graphql`
         question13
         question14
         question15
-        question16
-        question17
-        question18
-        question19
         question2
         question3
         question4
@@ -159,10 +151,6 @@ export const query = graphql`
         style13
         style14
         style15
-        style16
-        style17
-        style18
-        style19
         style2
         style3
         style4
@@ -287,34 +275,6 @@ export const query = graphql`
           }
         }
         i15 {
-          asset {
-            fluid(maxWidth: 1000) {
-              ...GatsbySanityImageFluid
-            }
-          }
-        }
-        i16 {
-          asset {
-            fluid(maxWidth: 1000) {
-              ...GatsbySanityImageFluid
-            }
-          }
-        }
-        i17 {
-          asset {
-            fluid(maxWidth: 1000) {
-              ...GatsbySanityImageFluid
-            }
-          }
-        }
-        i18 {
-          asset {
-            fluid(maxWidth: 1000) {
-              ...GatsbySanityImageFluid
-            }
-          }
-        }
-        i19 {
           asset {
             fluid(maxWidth: 1000) {
               ...GatsbySanityImageFluid
