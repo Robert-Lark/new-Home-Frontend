@@ -15,3 +15,5 @@ function Song({currentSong}) {
 }
 
 export default Song;
+
+//NOTES TO GET IT TO PUSH
