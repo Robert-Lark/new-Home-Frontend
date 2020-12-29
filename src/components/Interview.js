@@ -199,23 +199,46 @@ flex-direction: column;
 align-items: center;
 margin: 10%;
 h4 {
+  text-align: center;
   width: 85vw;
+  color: green;
   font-size: 2rem;
 }
 h5 {
+  text-align: center;
   width: 85vw;
   font-size: 2rem;
 }
 .image {
 
 }
-	  }
+    }
+    @media screen and (max-width: 700px) {
+      h4 {
+  color: maroon;
+}
+    @media screen and (max-width: 600px) {
+      h4 {
+  color: purple;
+}
+@media screen and (max-width: 500px) {
+      h4 {
+  color: pink;
+}
+    @media screen and (max-width: 450px) {
+      h4 {
+  color: gold;
+}
 	  @media screen and (max-width: 375px) {
-
+      h4 {
+  color: red;
+}
 	
 	  }
       @media screen and (max-width: 360px) {
-
+        h4 {
+  color: blue;
+}
       
       }
     }
