@@ -32,50 +32,23 @@ nav {
       color: white;
     }
 
-    // 	360×640
-    // 1366×768
-    // 1920×1080
-    // 375×667
-    // 360×720
-    // 768×1024
-
-    h1 {
-      @media screen and (max-width: 768px) {
-        color: red;
-        font-size: 2rem;
-        margin-right: 50px;
-      }
-      @media screen and (max-width: 310px) {
-        color: blue;
-      }
-      @media screen and (max-width: 310px) {
-        color: green;
-      }
-      @media screen and (max-width: 310px) {
-        color: yellow;
-      }
-      @media screen and (max-width: 310px) {
-        color: pink;
-      }
-      @media screen and (max-width: 310px) {
-        color: purple;
-      }
-      @media screen and (max-width: 375px) {
-        color: grey;
-        width: 200px;
-        margin-left: 150px;
-        font-size: 1.5rem;
-      }
-      @media screen and (max-width: 360px) {
-        color: black;
-        text-align: center;
-        width: 100%;
-        font-size: 1.5rem;
-      }
-      @media screen and (max-width: 310px) {
-        color: brown;
-      }
+   
+  }
+  h1 {
+    font-size: 2.5rem;
+    @media screen and (max-width: 768px) {
+      text-align: center; 
+      font-size: 2rem;
+      margin-right: 50px;
     }
+    @media screen and (max-width: 375px) {
+      color: grey;
+      width: 200px;
+      margin-left: 150px;
+     
+      font-size: 1.5rem;
+    }
+    
   }
 }
 //NOTE TO PUSHh
