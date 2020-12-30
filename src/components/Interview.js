@@ -16,13 +16,13 @@ function Interview({current}) {
       </StyledTracklistContainer>
       <StyledAlbumArtGrid>
         {current.albumArt.map((art) => (
-          <div>
+
             <Img
               fluid={art.asset.fluid}
               alt={current.name}
-              style={{width: "100%", height: "80%"}}
+              className="albumArt"
             />
-          </div>
+
         ))}
       </StyledAlbumArtGrid>
 
@@ -150,9 +150,18 @@ const StyledAlbumArtGrid = styled.div`
   display: grid;
   grid-auto-flow: column;
   gap: 20px;
-  padding: 5%;
+  padding: 0 5% 0 5%;
+  margin-bottom: 25%;
+  .albumArt {
+    width: 80%;
+    height: 300%;
+    @media screen and (max-width: 375px) {
+      height: 400%;
+      
+  }
+  }
   @media screen and (max-width: 375px) {
-    width: 100%;
+    margin-bottom: 30%;
   }
 `;
 
