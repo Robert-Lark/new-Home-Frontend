@@ -156,12 +156,11 @@ const StyledAlbumArtGrid = styled.div`
     width: 80%;
     height: 300%;
     @media screen and (max-width: 375px) {
-      height: 400%;
-      
+      height: 400px;
   }
   }
   @media screen and (max-width: 375px) {
-    margin-bottom: 30%;
+    margin-bottom: 5%;
   }
 `;
 
