@@ -16,18 +16,21 @@ function Interview({current}) {
       </StyledTracklistContainer>
       <StyledAlbumArtGrid>
         {current.albumArt.map((art) => (
-          <Img
-            fluid={art.asset.fluid}
-            alt={current.name}
-            style={{width: "100%", height: "80%"}}
-          />
+          <div>
+            <Img
+              fluid={art.asset.fluid}
+              alt={current.name}
+              style={{width: "100%", height: "80%"}}
+            />
+          </div>
         ))}
       </StyledAlbumArtGrid>
-      <StyledArtistImage>
-        <Img fluid={current.imageOfArtist.asset.fluid} alt={current.name} />
-      </StyledArtistImage>
+
       <StyledHeader>{current.artist}</StyledHeader>
       <StyledDescription>{current.description}</StyledDescription>
+            <StyledArtistImage>
+        <Img fluid={current.imageOfArtist.asset.fluid} alt={current.name} />
+      </StyledArtistImage>
       <StyledInterviewGrid>
         <h4>{current.question1}</h4>
         <h5>{current.answer1}</h5>
@@ -119,9 +122,9 @@ function Interview({current}) {
 }
 
 const StyledContainer = styled.div`
-
-  /* margin: 0 10% 0 10%;
-  padding: 5% 10% 5% 10%; */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   @media screen and (max-width: 375px) {
     display: flex;
     flex-direction: column;
@@ -129,132 +132,68 @@ const StyledContainer = styled.div`
   }
 `;
 const StyledTracklistContainer = styled.div`
-
   text-align: center;
+  padding: 5%;
   p {
     font-family: "Source Code Pro", monospace;
     padding: 0.5rem;
   }
-  @media screen and (max-width: 375px) {
-    width: 100vw;
-    margin-bottom: 100px;
-    p {
-      font-size: 30px;
-    }
-  }
-  @media screen and (max-width: 360px) {
-	p {
-		font-size: 1rem;
-	}
-  }
 `;
 const StyledArtistImage = styled.div`
-
-  box-shadow: 0px 0px 10px 4px #e0e0e0;
-  margin: 5% 0 5% 0;
+  padding: 5%;
   @media screen and (max-width: 375px) {
-    width: 95vw;
-    /* margin-right: 5%;
-    margin-left: 10px; */
-    margin-bottom: 40px;
+    width: 100%;
   }
 `;
 const StyledAlbumArtGrid = styled.div`
-
-  margin: 8% -30% 0 -30%;
+  width: 100%;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-auto-flow: column;
   gap: 20px;
+  padding: 5%;
   @media screen and (max-width: 375px) {
-    width: 90vw;
-    //margin: 8% 0% 0 5%;
-    //margin-bottom: 40px;
+    width: 100%;
   }
 `;
-const StyledHeader = styled.div`
 
+const StyledHeader = styled.div`
   text-align: center;
   font-size: 5rem;
   font-family: "Source Code Pro", monospace;
-  //margin: 10%;
-  @media screen and (max-width: 1920px) {
-    @media screen and (max-width: 1366px) {
-    }
-    @media screen and (max-width: 768px) {
-      font-size: 4rem;
-    }
-    @media screen and (max-width: 375px) {
-      width: 100vw;
-      margin-bottom: 40px;
-    }
-    @media screen and (max-width: 360px) {
-    }
-  }
+  padding: 5%;
+  @media screen and (max-width: 375px) {
+    font-size: 3rem;
+}
 `;
 const StyledDescription = styled.div`
+  text-align: center;
   font-size: 3rem;
   font-family: "Raleway", sans-serif;
-  @media screen and (max-width: 1920px) {
-    @media screen and (max-width: 1366px) {
-    }
-    @media screen and (max-width: 768px) {
-      font-size: 1rem;
-      text-align: center;
-    }
-    @media screen and (max-width: 375px) {
-      width: 80vw;
-      font-size: 30px;
-    }
-    @media screen and (max-width: 360px) {
-    }
-  }
+  padding: 3%;
+  @media screen and (max-width: 375px) {
+    font-size: 1rem;
+}
 `;
 const StyledInterviewGrid = styled.div`
-
-
-  margin: 0 -30% 0 -30%;
-  //padding: 5% 10% 5% 10%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 3%;
   font-size: 3rem;
-  margin-top: 4rem;
-  display: grid;
-  grid-template-columns: 2;
-  gap: 4rem;
-  div {
-    display: flex;
-    flex-direction: row-reverse;
-    width: 500px;
+  @media screen and (max-width: 375px) {
+    font-size: 1rem;
+}
+  h5 {
+    margin: 2% 0% 2% 0%;
   }
   .image {
-    width: 80vw;
-    margin: 5%;
-  }
-  @media screen and (max-width: 1920px) {
-    @media screen and (max-width: 1366px) {
-      @media screen and (max-width: 768px) {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin: 10%;
-        h4 {
-          text-align: center;
-          width: 85vw;
-          font-size: 1.5rem;
-          margin-top: 20px;
-        }
-        h5 {
-          text-align: center;
-          width: 85vw;
-          font-size: 1.5rem;
-          margin-bottom: 20px;
-        }
-        .image {
-        }
-      }
-    }
+    width: 50vw;
+    margin: 5% 0 5% 0;
   }
 `;
 const StyledButton = styled.div`
-text-align: center;
-width: 100vw;
+  text-align: center;
+  width: 100vw;
 `;
 export default Interview;
