@@ -35,8 +35,8 @@ function Interview({current}) {
         {current.video1 ? (
           <iframe
             title={current.name}
-            width="560"
-            height="315"
+            width="350"
+            height="250"
             src={current.video1}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -54,8 +54,8 @@ function Interview({current}) {
         {current.video2 ? (
           <iframe
             title={current.name}
-            width="560"
-            height="315"
+            width="350"
+            height="250"
             src={current.video2}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -73,8 +73,8 @@ function Interview({current}) {
         {current.video3 ? (
           <iframe
             title={current.name}
-            width="560"
-            height="315"
+            width="350"
+            height="250"
             src={current.video3}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -92,8 +92,8 @@ function Interview({current}) {
         {current.video4 ? (
           <iframe
             title={current.name}
-            width="560"
-            height="315"
+            width="350"
+            height="250"
             src={current.video4}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -111,8 +111,8 @@ function Interview({current}) {
         {current.video5 ? (
           <iframe
             title={current.name}
-            width="560"
-            height="315"
+            width="350"
+            height="250"
             src={current.video5}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -130,8 +130,8 @@ function Interview({current}) {
         {current.video6 ? (
           <iframe
             title={current.name}
-            width="560"
-            height="315"
+            width="350"
+            height="250"
             src={current.video6}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -149,8 +149,8 @@ function Interview({current}) {
         {current.video7 ? (
           <iframe
             title={current.name}
-            width="560"
-            height="315"
+            width="350"
+            height="250"
             src={current.video7}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -168,8 +168,8 @@ function Interview({current}) {
         {current.video8 ? (
           <iframe
             title={current.name}
-            width="560"
-            height="315"
+            width="350"
+            height="250"
             src={current.video8}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -188,8 +188,8 @@ function Interview({current}) {
         {current.video9 ? (
           <iframe
             title={current.name}
-            width="560"
-            height="315"
+            width="350"
+            height="250"
             src={current.video9}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -207,8 +207,8 @@ function Interview({current}) {
         {current.video10 ? (
           <iframe
             title={current.name}
-            width="560"
-            height="315"
+            width="350"
+            height="250"
             src={current.video10}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -229,8 +229,8 @@ function Interview({current}) {
             {current.video11 ? (
           <iframe
             title={current.name}
-            width="560"
-            height="315"
+            width="350"
+            height="250"
             src={current.video11}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -253,8 +253,8 @@ function Interview({current}) {
         {current.video12 ? (
           <iframe
             title={current.name}
-            width="560"
-            height="315"
+            width="350"
+            height="250"
             src={current.video12}
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
