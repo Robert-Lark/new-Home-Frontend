@@ -8,21 +8,21 @@ function Interview({current}) {
   return current.question1 ? (
     <StyledContainer>
       <StyledTracklistContainer>
-        {/* {current.tracklist.map((track) => (
+        {current.tracklist.map((track) => (
           <p className="tracklist" key={track}>
             {track}
           </p>
-        ))} */}
+        ))}
       </StyledTracklistContainer>
       <StyledAlbumArtGrid>
-        {/* {current.albumArt.map((art) => (
+        {current.albumArt.map((art) => (
           <Img
             fluid={art.asset.fluid}
             alt={art.name}
             className="albumArt"
             key={art.id}
           />
-        ))} */}
+        ))}
       </StyledAlbumArtGrid>
       <StyledHeader className={current.style1}>{current.artist}</StyledHeader>
       <StyledDescription>{current.description}</StyledDescription>
