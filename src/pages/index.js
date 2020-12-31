@@ -26,9 +26,10 @@ function QuietCast({data}) {
       ...mix,
     }));
   }
+
   //Ref
   const audioRef = useRef(null);
-  const [songs, setSongs] = useState(mixData(data.content.nodes));
+  const [songs, setSongs] = useState(mixData(data.content.nodes.sort((a, b) => a.name.localeCompare(b.name)).reverse()));
   const [currentSong, setCurrentSong] = useState(songs[0]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [songInfo, setSongInfo] = useState({
