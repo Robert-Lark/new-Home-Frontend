@@ -10,10 +10,13 @@ nav {
   min-height: 10vh;
   min-width: 100vw;
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
   align-items: center;
   @media screen and (max-width: 376px) {
     padding: 5%;
+    min-width: 80vw;
+    margin-left: -40px;
+
   }
 
   .display {
@@ -27,11 +30,14 @@ nav {
     border: 2px solid rgb(65, 65, 65);
     padding: 0.5rem;
     transition: all 0.3s ease;
+    
     &:hover {
       background: rgb(65, 65, 65);
       color: white;
     }
+    @media screen and (max-width: 376px) {
 
+    }
    
   }
   h1 {
@@ -43,10 +49,10 @@ nav {
     }
     @media screen and (max-width: 375px) {
       color: grey;
-      width: 200px;
-      margin-left: 150px;
-     
+      width: 150px;
+
       font-size: 1.5rem;
+      height: 100px;
     }
     
   }
