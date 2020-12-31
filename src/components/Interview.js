@@ -182,6 +182,7 @@ function Interview({current}) {
             className="image"
           />
         )}
+        {current.question9 ? <>
         <h4>{current.question9}</h4>
         <h5>{current.answer9}</h5>
         {current.video9 ? (
@@ -220,6 +221,7 @@ function Interview({current}) {
             className="image"
           />
         )}
+        
         {current.question11 ? (
           <>
             <h4>{current.question11}</h4>
@@ -279,6 +281,7 @@ function Interview({current}) {
         ) : (
           <></>
         )}
+        </> : <></>}
       </StyledInterviewGrid>
       <StyledButton>Return to the top</StyledButton>
     </StyledContainer>
@@ -343,10 +346,10 @@ const StyledAlbumArtGrid = styled.div`
   grid-auto-flow: column;
   gap: 20px;
   padding: 0 5% 0 5%;
-  margin-bottom: 25%;
+  margin-bottom: -5%;
   .albumArt {
     width: 80%;
-    height: 300%;
+    height: 900px;
     @media screen and (max-width: 375px) {
       height: 400px;
       width: 100%;
