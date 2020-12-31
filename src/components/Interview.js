@@ -32,11 +32,23 @@ function Interview({current}) {
       <StyledInterviewGrid>
         <h4>{current.question1}</h4>
         <h5>{current.answer1}</h5>
-        <Img
-          fluid={current.i1.asset.fluid}
-          alt={current.name}
-          className="image"
-        />
+        {current.video1 ? (
+          <iframe
+            title={current.name}
+            width="560"
+            height="315"
+            src={current.video1}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+        ) : (
+          <Img
+            fluid={current.i1.asset.fluid}
+            alt={current.name}
+            className="image"
+          />
+        )}
         <h4>{current.question2}</h4>
         <h5>{current.answer2}</h5>
         {current.video2 ? (
@@ -58,33 +70,80 @@ function Interview({current}) {
         )}
         <h4>{current.question3}</h4>
         <h5>{current.answer3}</h5>
-        <Img
-          fluid={current.i3.asset.fluid}
-          alt={current.name}
-          className="image"
-        />
+        {current.video3 ? (
+          <iframe
+            title={current.name}
+            width="560"
+            height="315"
+            src={current.video3}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+        ) : (
+          <Img
+            fluid={current.i3.asset.fluid}
+            alt={current.name}
+            className="image"
+          />
+        )}
         <h4>{current.question4}</h4>
         <h5>{current.answer4}</h5>
-        <Img
-          fluid={current.i4.asset.fluid}
-          alt={current.name}
-          className="image"
-        />
+        {current.video4 ? (
+          <iframe
+            title={current.name}
+            width="560"
+            height="315"
+            src={current.video4}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+        ) : (
+          <Img
+            fluid={current.i4.asset.fluid}
+            alt={current.name}
+            className="image"
+          />
+        )}
         <h4>{current.question5}</h4>
         <h5>{current.answer5}</h5>
-        <Img
-          fluid={current.i5.asset.fluid}
-          alt={current.name}
-          className="image"
-        />
-
+        {current.video5 ? (
+          <iframe
+            title={current.name}
+            width="560"
+            height="315"
+            src={current.video5}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+        ) : (
+          <Img
+            fluid={current.i5.asset.fluid}
+            alt={current.name}
+            className="image"
+          />
+        )}
         <h4>{current.question6}</h4>
         <h5>{current.answer6}</h5>
-        <Img
-          fluid={current.i6.asset.fluid}
-          alt={current.name}
-          className="image"
-        />
+        {current.video6 ? (
+          <iframe
+            title={current.name}
+            width="560"
+            height="315"
+            src={current.video6}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+        ) : (
+          <Img
+            fluid={current.i6.asset.fluid}
+            alt={current.name}
+            className="image"
+          />
+        )}
         <h4>{current.question7}</h4>
         <h5>{current.answer7}</h5>
         {current.video7 ? (
@@ -106,26 +165,82 @@ function Interview({current}) {
         )}
         <h4>{current.question8}</h4>
         <h5>{current.answer8}</h5>
-        <Img
-          fluid={current.i8.asset.fluid}
-          alt={current.name}
-          className="image"
-        />
+        {current.video8 ? (
+          <iframe
+            title={current.name}
+            width="560"
+            height="315"
+            src={current.video8}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+        ) : (
+          <Img
+            fluid={current.i8.asset.fluid}
+            alt={current.name}
+            className="image"
+          />
+        )}
         <h4>{current.question9}</h4>
         <h5>{current.answer9}</h5>
-        <Img
-          fluid={current.i9.asset.fluid}
-          alt={current.name}
-          className="image"
-        />
+        {current.video9 ? (
+          <iframe
+            title={current.name}
+            width="560"
+            height="315"
+            src={current.video9}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+        ) : (
+          <Img
+            fluid={current.i9.asset.fluid}
+            alt={current.name}
+            className="image"
+          />
+        )}
         <h4>{current.question10}</h4>
         <h5>{current.answer10}</h5>
-
-        {/* <div style={current.i10 ? "addQuestions" : "noMoreQuestions"}> */}
+        {current.video10 ? (
+          <iframe
+            title={current.name}
+            width="560"
+            height="315"
+            src={current.video10}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+        ) : (
+          <Img
+            fluid={current.i10.asset.fluid}
+            alt={current.name}
+            className="image"
+          />
+        )}
         {current.question11 ? (
           <>
             <h4>{current.question11}</h4>
             <h5>{current.answer11}</h5>
+            {current.video11 ? (
+              <iframe
+                title={current.name}
+                width="560"
+                height="315"
+                src={current.video11}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            ) : (
+              <Img
+                fluid={current.i11.asset.fluid}
+                alt={current.name}
+                className="image"
+              />
+            )}
             <h4>{current.question12}</h4>
             <h5>{current.answer12}</h5>
           </>
@@ -287,8 +402,5 @@ const StyledButton = styled.div`
   text-align: center;
   width: 100vw;
 `;
-
-
-
 
 export default Interview;
