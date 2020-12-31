@@ -225,24 +225,25 @@ function Interview({current}) {
             <h4>{current.question11}</h4>
             <h5>{current.answer11}</h5>
             {current.video11 ? (
-              <iframe
-                title={current.name}
-                width="560"
-                height="315"
-                src={current.video11}
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
-            ) : (
-              <Img
-                fluid={current.i11.asset.fluid}
-                alt={current.name}
-                className="image"
-              />
-            )}
+          <iframe
+            title={current.name}
+            width="560"
+            height="315"
+            src={current.video11}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          ></iframe>
+        ) : (
+          <Img
+            fluid={current.i11.asset.fluid}
+            alt={current.name}
+            className="image"
+          />
+        )}
             <h4>{current.question12}</h4>
             <h5>{current.answer12}</h5>
+        
           </>
         ) : (
           <></>
@@ -402,5 +403,8 @@ const StyledButton = styled.div`
   text-align: center;
   width: 100vw;
 `;
+
+
+
 
 export default Interview;
