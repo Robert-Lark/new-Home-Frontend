@@ -15,7 +15,7 @@ const Library = ({
 		<div className={`library ${libraryStatus ? "active-library" : ""}`}>
 			<h2 className="library-title" >Library</h2>
 			<div className="library-songs">
-				{songs.slice(0).reverse().map((song) => (
+				{songs.map((song) => (
 					<LibrarySong
 						song={song}
 						setCurrentSong={setCurrentSong}
