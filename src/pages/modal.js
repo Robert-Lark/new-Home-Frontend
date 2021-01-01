@@ -14,57 +14,58 @@ function Modal({location}) {
         <StyledCover>
           <Img fluid={state.img} alt={state.title} />
         </StyledCover>
-        <div style={{width: "50vw", display: "flex", flexDirection: "column", alignItems: "center"}}>
-        <StyledInfo>
-          <h1>{state.artist}</h1>
-          <h1 style={{marginBottom: "20px"}}>{state.title}</h1>
-          <h1 style={{fontSize: "1rem", marginBottom: "20px"}}>{state.label}</h1>
-          <h2>{state.info}</h2>
-        </StyledInfo>
-        <StyledVideo>
-          {breakpoints.xs ? (
-            <div>
+        <div
+          style={{
+            width: "50vw",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <StyledInfo>
+            <h1>{state.artist}</h1>
+            <h1 style={{marginBottom: "20px"}}>{state.title}</h1>
+            <h1 style={{fontSize: "1rem", marginBottom: "20px"}}>
+              {state.label}
+            </h1>
+            <h2>{state.info}</h2>
+          </StyledInfo>
+          <StyledVideo>
+            {breakpoints.xs ? (
+              <div>
+                <ReactPlayer
+                  wrapper="div"
+                  url={state.url}
+                  // style={{marginBottom: "-90%"}}
+                />
+              </div>
+            ) : breakpoints.sm ? (
+              <div>
+                <ReactPlayer
+                  wrapper="div"
+                  url={state.url}
+
+                  // style={{marginBottom: "-90%"}}
+                />
+              </div>
+            ) : breakpoints.md ? (
               <ReactPlayer
-                wrapper="div"
-                url={state.url}
-                // style={{marginBottom: "-90%"}}
-              />
-            </div>
-          ) : breakpoints.sm ? (
-            <div>
-              <ReactPlayer
-                wrapper="div"
                 url={state.url}
 
                 // style={{marginBottom: "-90%"}}
               />
-            </div>
-          ) : breakpoints.md ? (
-
+            ) : breakpoints.l ? (
               <ReactPlayer
-      
                 url={state.url}
-
-                // style={{marginBottom: "-90%"}}
-              />
- 
-          ) : breakpoints.l ? (
-  
-              <ReactPlayer
-
-                url={state.url}
-  
-  
+                style={{padding: "20px"}}
                 // style={{marginTop: "-35%"}}
               />
-
-          ) : (
-            <div>
-              <ReactPlayer wrapper="div" url={state.url} />
-            </div>
-          )}
-          
-        </StyledVideo>
+            ) : (
+              <div>
+                <ReactPlayer wrapper="div" url={state.url} />
+              </div>
+            )}
+          </StyledVideo>
         </div>
       </StyledGrid>
     </StyledContainer>
@@ -74,7 +75,7 @@ function Modal({location}) {
 export default Modal;
 
 const StyledContainer = styled.div`
-/* display: grid;
+  /* display: grid;
 grid-column: 2;
 grid-row: 2; */
   /* display: flex;
@@ -102,30 +103,27 @@ grid-row: 2; */
   } */
 `;
 
-
 const StyledGrid = styled.div`
- display: flex;
- 
-  @media (max-width: 1400px) {
-    padding-top: 90px;
-margin-top: 150px
-  }
-  @media (max-width: 767px) {
-display: flex;
-flex-direction: column;
-align-items: center;
+padding: 10px;
+  display: flex;
 
-margin-top: -50px;
+
+  @media (max-width: 767px) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    margin-top: -50px;
   }
   @media (max-width: 500px) {
-display: flex;
-flex-direction: column;
-align-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 `;
 
 const StyledInfo = styled.div`
-width: 40vw;
+  width: 40vw;
 
   margin-bottom: 50px;
 
@@ -133,22 +131,22 @@ width: 40vw;
     font-family: "Source Code Pro", monospace;
   }
   @media (max-width: 767px) {
-width: 80vw;
-h1{
-  text-align: center;
-}
+    width: 80vw;
+    h1 {
+      text-align: center;
+    }
   }
-  
+
   @media (max-width: 500px) {
-width: 70vw;
-font-size: .5rem;
-margin-top: 25px;
-h1 {
-  text-align: center;
-}
-h2 {
-  text-align: center;
-}
+    width: 70vw;
+    font-size: 0.5rem;
+    margin-top: 25px;
+    h1 {
+      text-align: center;
+    }
+    h2 {
+      text-align: center;
+    }
   }
   /* @media (max-width: 1400px) {
     width: 30vw;
@@ -190,7 +188,6 @@ h2 {
   }  */
 `;
 const StyledVideo = styled.div`
-
   /* div {
     @media (max-width: 1400px) {
       width: 100px;
@@ -206,9 +203,9 @@ margin-top: -400px;
   } */
 `;
 const StyledCover = styled.div`
-width: 50vw;
-@media (max-width: 800px) {
-   display: none;
+  width: 50vw;
+  @media (max-width: 800px) {
+    display: none;
   }
   /* box-shadow: 0px 0px 10px 4px #e0e0e0;
 
