@@ -14,10 +14,11 @@ function Modal({location}) {
         <StyledCover>
           <Img fluid={state.img} alt={state.title} />
         </StyledCover>
+        <div style={{width: "50vw", display: "flex", flexDirection: "column", alignItems: "center"}}>
         <StyledInfo>
           <h1>{state.artist}</h1>
-          <h1>{state.title}</h1>
-          <h1>{state.label}</h1>
+          <h1 style={{marginBottom: "20px"}}>{state.title}</h1>
+          <h1 style={{fontSize: "1rem", marginBottom: "20px"}}>{state.label}</h1>
           <h2>{state.info}</h2>
         </StyledInfo>
         <StyledVideo>
@@ -65,7 +66,9 @@ function Modal({location}) {
               <ReactPlayer wrapper="div" url={state.url} />
             </div>
           )}
+          
         </StyledVideo>
+        </div>
       </StyledGrid>
     </StyledContainer>
   );
@@ -74,7 +77,10 @@ function Modal({location}) {
 export default Modal;
 
 const StyledContainer = styled.div`
-  display: flex;
+/* display: grid;
+grid-column: 2;
+grid-row: 2; */
+  /* display: flex;
   justify-content: center;
   align-items: center;
   margin-top: 90px;
@@ -96,14 +102,12 @@ const StyledContainer = styled.div`
   }
   @media (max-width: 320px) {
     margin-top: -50%;
-  }
+  } */
 `;
 
 const StyledGrid = styled.div`
-  display: grid;
-  grid-template-columns: 2;
-  grid-template-rows: 4;
-  gap: 25px;
+ display: flex;
+ 
   @media (max-width: 1400px) {
     padding-top: 90px;
 margin-top: 150px
@@ -116,18 +120,18 @@ margin-top: 150px
   @media (max-width: 320px) {
     margin-top: 300px;
     margin-right: -20px;
-  }
+  } */
 `;
 
 const StyledInfo = styled.div`
-  box-shadow: 0px 0px 10px 4px #e0e0e0;
+width: 40vw;
+
   margin-bottom: 50px;
-  grid-column: 2;
-  grid-row: span 2;
+
   h2 {
     font-family: "Source Code Pro", monospace;
   }
-  @media (max-width: 1400px) {
+  /* @media (max-width: 1400px) {
     width: 30vw;
     grid-row: span 2;
     box-shadow: none;
@@ -164,10 +168,11 @@ const StyledInfo = styled.div`
     h2 {
       text-align: center;
     }
-  }
+  }  */
 `;
 const StyledVideo = styled.div`
-  div {
+
+  /* div {
     @media (max-width: 1400px) {
       width: 100px;
     }
@@ -179,10 +184,11 @@ margin-top: -400px;
       grid-row: 3;
       margin-top: -70px;
     }
-  }
+  } */
 `;
 const StyledCover = styled.div`
-  box-shadow: 0px 0px 10px 4px #e0e0e0;
+width: 50vw;
+  /* box-shadow: 0px 0px 10px 4px #e0e0e0;
 
   @media (max-width: 1400px) {
     width: 40vw;
@@ -199,5 +205,5 @@ const StyledCover = styled.div`
   }
   @media (max-width: 320px) {
     margin-left: 22%;
-  }
+  } */
 `;

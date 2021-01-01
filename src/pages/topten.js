@@ -6,6 +6,7 @@ import styled from "styled-components";
 // YOU CAN PROBABLY DESTRUCTURE CONTENT AND REPLACE DATA WITH NODES
 function Topten({data}) {
   const content = data.topTen.nodes[0];
+  console.log(content)
   return (
     <StyledContainerDiv>
 
@@ -190,7 +191,7 @@ function Topten({data}) {
               title: content.title9,
               label: content.label9,
               artist: content.artist9,
-              url: content.url9,
+              url: content.url910,
               info: content.description9,
             }}
           >
