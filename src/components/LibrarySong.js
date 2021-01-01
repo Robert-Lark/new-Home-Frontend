@@ -32,6 +32,7 @@ function LibrarySong({
     setLibraryStatus(!libraryStatus)
     if (isPlaying) audioRef.current.play();
   };
+  console.log(song)
   return (
     <div
       className={`library-song ${song.active ? "selected" : ""}`}
@@ -44,6 +45,7 @@ function LibrarySong({
         alt={song.name}
         className="image"
       />
+      <p style={{fontFamily: "Source Code Pro", marginTop: "15px"}}>{song.artist}</p>
     </div>
   );
 }
