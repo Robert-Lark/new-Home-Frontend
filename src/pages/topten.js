@@ -231,7 +231,7 @@ export default Topten;
 
 const StyledContainerDiv = styled.div`
   //padding: 40px;
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
 
   }
 `;
@@ -242,7 +242,7 @@ const StyledGrid = styled.div`
   grid-gap: 20px;
   div {
   }
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -255,7 +255,7 @@ const StyledYear = styled.div`
   font-family: "Cormorant Garamond", serif;
   font-size: 5rem;
   grid-column: span 5;
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
     font-size: 2rem;
     width: 80vw;
   }
@@ -274,7 +274,7 @@ const StyledDescription = styled.div`
   border: 0.5px solid gold;
   border-radius: 20px;
   font-size: 1.5rem;
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
     font-size: .5rem;
     width: 60vw;
   }
@@ -282,14 +282,14 @@ const StyledDescription = styled.div`
 const StyledTopRow = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
  width: 60vw;
   }
   /* @media (max-width: 1000px) {
     text-align: center;
   font-size: 1rem;
   }
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
     grid-column: 1 / span 1;
     margin-left: 80px;
   } */
@@ -302,11 +302,11 @@ const StyledFive = styled.div`
     text-align: center;
   font-size: 1rem;
   }
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
     grid-column: 1 / span 1;
     margin-left: 80px;
   } */
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
  width: 60vw;
   }
 `;
@@ -314,14 +314,14 @@ const StyledFour = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
   grid-column: 4 / span 2;
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
  width: 60vw;
   }
   /* @media (max-width: 1000px) {
     text-align: center;
   font-size: 1rem;
   }
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
     grid-column: 1 / span 1;
     margin-left: 80px;
   } */
@@ -330,14 +330,14 @@ const StyledThree = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
   grid-column: 2 / span 3;
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
  width: 60vw;
   }
   /* @media (max-width: 1000px) {
     text-align: center;
   font-size: 2rem;
   }
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
     grid-column: 1 / span 1;
     margin-left: 80px;
   } */
@@ -346,14 +346,14 @@ const StyledSecond = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
   grid-column: 2 / span 3;
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
  width: 60vw;
   }
   /* @media (max-width: 1000px) {
     text-align: center;
   font-size: 2rem;
   }
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
     grid-column: 1 / span 1;
     margin-left: 80px;
   } */
@@ -362,14 +362,14 @@ const StyledFirst = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
   grid-column: span 5;
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
  width: 60vw;
   }
   /* @media (max-width: 1000px) {
     text-align: center;
   font-size: 3rem;
   }
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
     grid-column: 1 / span 1;
     margin-right: -60px;
   } */
