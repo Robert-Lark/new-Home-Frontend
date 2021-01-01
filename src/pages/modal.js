@@ -29,7 +29,7 @@ function Modal({location}) {
                 url={state.url}
                 width="197px"
                 height="120px"
-                style={{marginBottom: "-90%"}}
+                // style={{marginBottom: "-90%"}}
               />
             </div>
           ) : breakpoints.sm ? (
@@ -39,7 +39,7 @@ function Modal({location}) {
                 url={state.url}
                 width="250px"
                 height="160px"
-                style={{marginBottom: "-90%"}}
+                // style={{marginBottom: "-90%"}}
               />
             </div>
           ) : breakpoints.md ? (
@@ -48,7 +48,7 @@ function Modal({location}) {
       
                 url={state.url}
                 width="100%"
-                style={{marginBottom: "-90%"}}
+                // style={{marginBottom: "-90%"}}
               />
  
           ) : breakpoints.l ? (
