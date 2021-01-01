@@ -230,9 +230,9 @@ export default Topten;
 //MODAL
 
 const StyledContainerDiv = styled.div`
-  padding: 40px;
+  //padding: 40px;
   @media (max-width: 400px) {
-   padding: 0px;
+
   }
 `;
 
@@ -243,24 +243,28 @@ const StyledGrid = styled.div`
   div {
   }
   @media (max-width: 400px) {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, 300px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 `;
 const StyledYear = styled.div`
   margin: 0 10% 0 10%;
   padding: 5% 10% 0% 10%;
-  border: none;
   text-align: center;
   font-family: "Cormorant Garamond", serif;
   font-size: 5rem;
   grid-column: span 5;
-  @media (max-width: 1375px) {
+  @media (max-width: 400px) {
+    font-size: 1rem;
+    width: 40vw;
+  }
+  /* @media (max-width: 1375px) {
     font-size: 3.5rem;
   }
   @media (max-width: 1000px) {
     font-size: 3rem;
-  }
+  } */
 `;
 const StyledDescription = styled.div`
   margin: 0 10% 2% 10%;
@@ -270,83 +274,105 @@ const StyledDescription = styled.div`
   border: 0.5px solid gold;
   border-radius: 20px;
   font-size: 1.5rem;
+  @media (max-width: 400px) {
+    font-size: .5rem;
+    width: 40vw;
+  }
 `;
 const StyledTopRow = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
-  @media (max-width: 1000px) {
+  @media (max-width: 400px) {
+ width: 60vw;
+  }
+  /* @media (max-width: 1000px) {
     text-align: center;
   font-size: 1rem;
   }
   @media (max-width: 400px) {
     grid-column: 1 / span 1;
     margin-left: 80px;
-  }
+  } */
 `;
 const StyledFive = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
   grid-column: 1 / span 2;
-  @media (max-width: 1000px) {
+  /* @media (max-width: 1000px) {
     text-align: center;
   font-size: 1rem;
   }
   @media (max-width: 400px) {
     grid-column: 1 / span 1;
     margin-left: 80px;
+  } */
+  @media (max-width: 400px) {
+ width: 60vw;
   }
 `;
 const StyledFour = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
   grid-column: 4 / span 2;
-  @media (max-width: 1000px) {
+  @media (max-width: 400px) {
+ width: 60vw;
+  }
+  /* @media (max-width: 1000px) {
     text-align: center;
   font-size: 1rem;
   }
   @media (max-width: 400px) {
     grid-column: 1 / span 1;
     margin-left: 80px;
-  }
+  } */
 `;
 const StyledThree = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
   grid-column: 2 / span 3;
-  @media (max-width: 1000px) {
+  @media (max-width: 400px) {
+ width: 60vw;
+  }
+  /* @media (max-width: 1000px) {
     text-align: center;
   font-size: 2rem;
   }
   @media (max-width: 400px) {
     grid-column: 1 / span 1;
     margin-left: 80px;
-  }
+  } */
 `;
 const StyledSecond = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
   grid-column: 2 / span 3;
-  @media (max-width: 1000px) {
+  @media (max-width: 400px) {
+ width: 60vw;
+  }
+  /* @media (max-width: 1000px) {
     text-align: center;
   font-size: 2rem;
   }
   @media (max-width: 400px) {
     grid-column: 1 / span 1;
     margin-left: 80px;
-  }
+  } */
 `;
 const StyledFirst = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   border: 1px solid gold;
   grid-column: span 5;
-  @media (max-width: 1000px) {
+  @media (max-width: 400px) {
+ width: 60vw;
+  }
+  /* @media (max-width: 1000px) {
     text-align: center;
   font-size: 3rem;
   }
   @media (max-width: 400px) {
     grid-column: 1 / span 1;
     margin-right: -60px;
-  }
+  } */
 `;
 
 export const query = graphql`
