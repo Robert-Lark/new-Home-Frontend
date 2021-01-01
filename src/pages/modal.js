@@ -120,7 +120,7 @@ margin-top: 150px
   @media (max-width: 320px) {
     margin-top: 300px;
     margin-right: -20px;
-  } */
+  }
 `;
 
 const StyledInfo = styled.div`
