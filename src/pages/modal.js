@@ -27,8 +27,6 @@ function Modal({location}) {
               <ReactPlayer
                 wrapper="div"
                 url={state.url}
-                width="197px"
-                height="120px"
                 // style={{marginBottom: "-90%"}}
               />
             </div>
@@ -37,8 +35,7 @@ function Modal({location}) {
               <ReactPlayer
                 wrapper="div"
                 url={state.url}
-                width="250px"
-                height="160px"
+
                 // style={{marginBottom: "-90%"}}
               />
             </div>
@@ -47,7 +44,7 @@ function Modal({location}) {
               <ReactPlayer
       
                 url={state.url}
-                width="100%"
+
                 // style={{marginBottom: "-90%"}}
               />
  
@@ -56,9 +53,9 @@ function Modal({location}) {
               <ReactPlayer
 
                 url={state.url}
-                width="100%"
-                // height="270px"
-                style={{marginTop: "-35%"}}
+  
+  
+                // style={{marginTop: "-35%"}}
               />
 
           ) : (
@@ -114,9 +111,11 @@ const StyledGrid = styled.div`
 margin-top: 150px
   }
   @media (max-width: 767px) {
-    grid-template-columns: 1;
-    grid-template-rows: 3;
-    margin-top: -100px
+display: flex;
+flex-direction: column;
+align-items: center;
+
+margin-top: -50px;
   }
   @media (max-width: 500px) {
 display: flex;
@@ -133,6 +132,13 @@ width: 40vw;
   h2 {
     font-family: "Source Code Pro", monospace;
   }
+  @media (max-width: 767px) {
+width: 80vw;
+h1{
+  text-align: center;
+}
+  }
+  
   @media (max-width: 500px) {
 width: 70vw;
 font-size: .5rem;
@@ -201,7 +207,7 @@ margin-top: -400px;
 `;
 const StyledCover = styled.div`
 width: 50vw;
-@media (max-width: 500px) {
+@media (max-width: 800px) {
    display: none;
   }
   /* box-shadow: 0px 0px 10px 4px #e0e0e0;
