@@ -256,8 +256,8 @@ const StyledYear = styled.div`
   font-size: 5rem;
   grid-column: span 5;
   @media (max-width: 400px) {
-    font-size: 1rem;
-    width: 40vw;
+    font-size: 2rem;
+    width: 80vw;
   }
   /* @media (max-width: 1375px) {
     font-size: 3.5rem;
@@ -276,7 +276,7 @@ const StyledDescription = styled.div`
   font-size: 1.5rem;
   @media (max-width: 400px) {
     font-size: .5rem;
-    width: 40vw;
+    width: 60vw;
   }
 `;
 const StyledTopRow = styled.div`
