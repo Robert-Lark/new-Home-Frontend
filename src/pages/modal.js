@@ -123,7 +123,7 @@ const StyledInfo = styled.div`
   box-shadow: 0px 0px 10px 4px #e0e0e0;
   margin-bottom: 50px;
   grid-column: 2;
-  grid-row: span 4;
+  grid-row: span 2;
   h2 {
     font-family: "Source Code Pro", monospace;
   }

@@ -28,54 +28,196 @@ function Topten({data}) {
           >
             <StyledTopRow>
               <Img fluid={content.i1.asset.fluid} alt={content.title1} />
-              <h2>{content.artist1}</h2>
-              <h3>{content.title1}</h3>
-              <h3>{content.label1}</h3>
+              <h2 style={{textAlign: "center"}}>10</h2>
             </StyledTopRow>
           </Link>
+          <Link
+            to="/modal"
+            asModal
+            state={{
+              noScroll: true,
+              //modal: true,
+              img: content.i2.asset.fluid,
+              title: content.title2,
+              label: content.label2,
+              artist: content.artist2,
+              url: content.url2,
+              info: content.description2,
+            }}
+          >
           <StyledTopRow>
             <Img
               fluid={content.i2.asset.fluid}
-              alt={content.title1}
+              alt={content.title2}
               style={{height: "100%"}}
             />
+            <h2 style={{textAlign: "center"}}>9</h2>
           </StyledTopRow>
+          </Link>
+          <Link
+            to="/modal"
+            asModal
+            state={{
+              noScroll: true,
+              //modal: true,
+              img: content.i3.asset.fluid,
+              title: content.title3,
+              label: content.label3,
+              artist: content.artist3,
+              url: content.url3,
+              info: content.description3,
+            }}
+          >
           <StyledTopRow>
             <Img
               fluid={content.i3.asset.fluid}
-              alt={content.title1}
+              alt={content.title3}
               style={{height: "100%"}}
             />
+            <h2 style={{textAlign: "center"}}>8</h2>
           </StyledTopRow>
+          </Link>
+          <Link
+            to="/modal"
+            asModal
+            state={{
+              noScroll: true,
+              //modal: true,
+              img: content.i4.asset.fluid,
+              title: content.title4,
+              label: content.label4,
+              artist: content.artist4,
+              url: content.url4,
+              info: content.description4,
+            }}
+          >
           <StyledTopRow>
             <Img
               fluid={content.i4.asset.fluid}
-              alt={content.title1}
+              alt={content.title4}
               style={{height: "100%"}}
             />
+            <h2 style={{textAlign: "center"}}>7</h2>
           </StyledTopRow>
+          </Link>
+          <Link
+            to="/modal"
+            asModal
+            state={{
+              noScroll: true,
+              //modal: true,
+              img: content.i5.asset.fluid,
+              title: content.title5,
+              label: content.label5,
+              artist: content.artist5,
+              url: content.url5,
+              info: content.description5,
+            }}
+          >
           <StyledTopRow>
             <Img
               fluid={content.i5.asset.fluid}
-              alt={content.title1}
+              alt={content.title5}
               style={{height: "100%"}}
             />
+            <h2 style={{textAlign: "center"}}>6</h2>
           </StyledTopRow>
+          </Link>
+          <Link
+            to="/modal"
+            asModal
+            state={{
+              noScroll: true,
+              //modal: true,
+              img: content.i6.asset.fluid,
+              title: content.title6,
+              label: content.label6,
+              artist: content.artist6,
+              url: content.url6,
+              info: content.description6,
+            }}
+          >
           <StyledFive>
-            <Img fluid={content.i6.asset.fluid} alt={content.title1} />
+            <Img fluid={content.i6.asset.fluid} alt={content.title6} />
+            <h2 style={{textAlign: "center"}}>5</h2>
           </StyledFive>
+          </Link>
+          <Link
+            to="/modal"
+            asModal
+            state={{
+              noScroll: true,
+              //modal: true,
+              img: content.i7.asset.fluid,
+              title: content.title7,
+              label: content.label7,
+              artist: content.artist7,
+              url: content.url7,
+              info: content.description7,
+            }}
+          >
           <StyledFour>
-            <Img fluid={content.i7.asset.fluid} alt={content.title1} />
+            <Img fluid={content.i7.asset.fluid} alt={content.title7} />
+            <h2 style={{textAlign: "center"}}>4</h2>
           </StyledFour>
+          </Link>
+          <Link
+            to="/modal"
+            asModal
+            state={{
+              noScroll: true,
+              //modal: true,
+              img: content.i8.asset.fluid,
+              title: content.title8,
+              label: content.label8,
+              artist: content.artist8,
+              url: content.url8,
+              info: content.description8,
+            }}
+          >
           <StyledThree>
-            <Img fluid={content.i8.asset.fluid} alt={content.title1} />
+            <Img fluid={content.i8.asset.fluid} alt={content.title8} />
+            <h2 style={{textAlign: "center"}}>3</h2>
           </StyledThree>
+          </Link>
+          <Link
+            to="/modal"
+            asModal
+            state={{
+              noScroll: true,
+              //modal: true,
+              img: content.i9.asset.fluid,
+              title: content.title9,
+              label: content.label9,
+              artist: content.artist9,
+              url: content.url9,
+              info: content.description9,
+            }}
+          >
           <StyledSecond>
-            <Img fluid={content.i9.asset.fluid} alt={content.title1} />
+            <Img fluid={content.i9.asset.fluid} alt={content.title9} />
+            <h2 style={{textAlign: "center"}}>2</h2>
           </StyledSecond>
+          </Link>
+          <Link
+            to="/modal"
+            asModal
+            state={{
+              noScroll: true,
+              //modal: true,
+              img: content.i10.asset.fluid,
+              title: content.title10,
+              label: content.label10,
+              artist: content.artist10,
+              url: content.url10,
+              info: content.description10,
+            }}
+          >
           <StyledFirst>
-            <Img fluid={content.i10.asset.fluid} alt={content.title1} />
+            <Img fluid={content.i10.asset.fluid} alt={content.title10} />
+            <h1 style={{textAlign: "center"}}>1</h1>
           </StyledFirst>
+          </Link>
         </StyledGrid>
 
     </StyledContainerDiv>
