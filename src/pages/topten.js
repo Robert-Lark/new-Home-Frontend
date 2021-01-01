@@ -275,8 +275,8 @@ const StyledDescription = styled.div`
   border-radius: 20px;
   font-size: 1.5rem;
   @media (max-width: 500px) {
-    font-size: .5rem;
-    width: 60vw;
+    font-size: 1rem;
+    width: 70vw;
   }
 `;
 const StyledTopRow = styled.div`

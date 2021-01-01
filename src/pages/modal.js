@@ -118,7 +118,7 @@ margin-top: 150px
     grid-template-rows: 3;
     margin-top: -100px
   }
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
 display: flex;
 flex-direction: column;
 align-items: center;
@@ -133,7 +133,7 @@ width: 40vw;
   h2 {
     font-family: "Source Code Pro", monospace;
   }
-  @media (max-width: 400px) {
+  @media (max-width: 500px) {
 width: 70vw;
 font-size: .5rem;
 margin-top: 25px;
@@ -201,7 +201,7 @@ margin-top: -400px;
 `;
 const StyledCover = styled.div`
 width: 50vw;
-@media (max-width: 400px) {
+@media (max-width: 500px) {
    display: none;
   }
   /* box-shadow: 0px 0px 10px 4px #e0e0e0;
