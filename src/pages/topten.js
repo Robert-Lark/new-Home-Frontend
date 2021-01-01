@@ -216,7 +216,7 @@ function Topten({data}) {
           >
           <StyledFirst>
             <Img fluid={content.i10.asset.fluid} alt={content.title10} />
-            <h1 style={{textAlign: "center"}}>1</h1>
+            <h2 style={{textAlign: "center"}}>1</h2>
           </StyledFirst>
           </Link>
         </StyledGrid>
@@ -365,14 +365,6 @@ const StyledFirst = styled.div`
   @media (max-width: 500px) {
  width: 60vw;
   }
-  /* @media (max-width: 1000px) {
-    text-align: center;
-  font-size: 3rem;
-  }
-  @media (max-width: 500px) {
-    grid-column: 1 / span 1;
-    margin-right: -60px;
-  } */
 `;
 
 export const query = graphql`
