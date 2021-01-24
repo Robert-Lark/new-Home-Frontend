@@ -24,12 +24,7 @@ module.exports = {
         plugins: [`gatsby-remark-responsive-iframe`],
       },
     },
-    {
-      resolve: 'gatsby-plugin-express',
-      options: {
-        output: 'config/gatsby-express.json',
-      }
-    },
+
     {
       resolve: `gatsby-plugin-modal-routing`,
       options: {
