@@ -10,7 +10,7 @@ const Library = ({
 	libraryStatus,
 	setLibraryStatus,
 }) => {
-	console.log(songs)
+
 	return (
 		<div className={`library ${libraryStatus ? "active-library" : ""}`}>
 			<h2 className="library-title" >Library</h2>

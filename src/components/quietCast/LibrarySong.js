@@ -32,7 +32,7 @@ function LibrarySong({
     setLibraryStatus(!libraryStatus)
     if (isPlaying) audioRef.current.play();
   };
-  console.log(song)
+
   return (
     <div
       className={`library-song ${song.active ? "selected" : ""}`}

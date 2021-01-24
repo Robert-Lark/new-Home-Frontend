@@ -3,8 +3,8 @@ import Img from "gatsby-image";
 import styled from "styled-components";
 
 function Interview({current}) {
-  const interviewContent = current;
-  console.log(interviewContent);
+
+
   return current.question1 ? (
     <StyledContainer>
       <StyledTracklistContainer>

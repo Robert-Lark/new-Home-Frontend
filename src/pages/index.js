@@ -12,7 +12,7 @@ import Interview from "../components/quietCast/Interview";
 import {playAudio} from "../components/quietCast/util";
 //DESTRUCTURE DATA 
 function QuietCast({data}) {
-  console.log(data.content.nodes[1]);
+
   //Import data
   function mixData(content) {
     return content.map((mix) => ({
