@@ -315,7 +315,7 @@ function Interview({current}) {
       </StyledAlbumArtGrid>
 
       <StyledHeader>{current.artist}</StyledHeader>
-      <StyledDescription>{current.description}</StyledDescription>
+      <StyledDescription style={{fontSize: "2rem"}}>{current.description}</StyledDescription>
       <StyledArtistImage>
         <Img fluid={current.imageOfArtist.asset.fluid} alt={current.name} />
       </StyledArtistImage>
