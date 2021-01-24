@@ -25,7 +25,7 @@ function Interview({current}) {
         ))}
       </StyledAlbumArtGrid>
       <StyledHeader className={current.style1}>{current.artist}</StyledHeader>
-      <StyledDescription>{current.description}</StyledDescription>
+      <StyledDescription style={{fontSize: "2rem"}}>{current.description}</StyledDescription>
       <StyledArtistImage>
         <Img fluid={current.imageOfArtist.asset.fluid} alt={current.name} />
       </StyledArtistImage>
@@ -338,6 +338,7 @@ const StyledContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
+
   @media screen and (max-width: 375px) {
     display: flex;
     flex-direction: column;
@@ -396,6 +397,7 @@ const StyledDescription = styled.div`
   font-size: 3rem;
   font-family: "Raleway", sans-serif;
   padding: 3%;
+
   @media screen and (max-width: 375px) {
     font-size: 1rem;
   }
