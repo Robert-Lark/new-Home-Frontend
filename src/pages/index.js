@@ -9,6 +9,7 @@ import Song from "../components/quietCast/Song";
 import Library from "../components/quietCast/Library";
 import Nav from "../components/quietCast/Nav";
 import Interview from "../components/quietCast/Interview";
+import favicon from '../images/favicon.ico'
 //Util
 import {playAudio} from "../components/quietCast/util";
 //DESTRUCTURE DATA 
@@ -64,7 +65,10 @@ function QuietCast({data}) {
   };
   return (
     <div className={`App ${libraryStatus ? "library-active" : ""}`} >
-      <Helmet><title>Quiet Cast</title></Helmet>
+      <Helmet>
+      <link rel="icon" href={favicon} />
+        <title>Quiet Cast</title>
+      </Helmet>
       <Nav libraryStatus={libraryStatus} setLibraryStatus={setLibraryStatus} />
       <Song isPlaying={isPlaying} currentSong={currentSong} />
       <Player
