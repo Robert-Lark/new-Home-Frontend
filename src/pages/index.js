@@ -2,6 +2,7 @@
 import {graphql} from "gatsby";
 import React, {useState, useRef} from "react";
 import "../styles/app.scss";
+import {Helmet} from 'react-helmet'
 //Import Components
 import Player from "../components/quietCast/Player";
 import Song from "../components/quietCast/Song";
@@ -63,6 +64,7 @@ function QuietCast({data}) {
   };
   return (
     <div className={`App ${libraryStatus ? "library-active" : ""}`} >
+      <Helmet><title>Quiet Cast</title></Helmet>
       <Nav libraryStatus={libraryStatus} setLibraryStatus={setLibraryStatus} />
       <Song isPlaying={isPlaying} currentSong={currentSong} />
       <Player
