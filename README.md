@@ -8,7 +8,7 @@
 
 # Quiet Cast
 
-Quiet Cast is a home for music and print interviews from musicians. It is the sister site of QuietCalmRecords.com which sells the music you can hear on Quiet Casts in vinyl formats. 
+Quiet Cast is a home for music and print interviews from musicians. It is the sister site of QuietCalmRecords.com which sells the music you can hear on Quiet Casts in vinyl formats. The site was built using React and Redux on the front-end and Sanity Headless CMS on the back. Apollo Client and GraphQL were used to query the data from Sanity. 
 
 ## Installation
 
