@@ -2,19 +2,18 @@
 import {graphql} from "gatsby";
 import React, {useState, useRef} from "react";
 import "../styles/app.scss";
-import {Helmet} from 'react-helmet'
+import {Helmet} from "react-helmet";
 //Import Components
 import Player from "../components/quietCast/Player";
 import Song from "../components/quietCast/Song";
 import Library from "../components/quietCast/Library";
 import Nav from "../components/quietCast/Nav";
 import Interview from "../components/quietCast/Interview";
-import favicon from '../images/favicon.ico'
+import favicon from "../images/favicon.ico";
 //Util
 import {playAudio} from "../components/quietCast/util";
-//DESTRUCTURE DATA 
+//DESTRUCTURE DATA
 function QuietCast({data}) {
-
   //Import data
   function mixData(content) {
     return content.map((mix) => ({
@@ -31,7 +30,11 @@ function QuietCast({data}) {
 
   //Ref
   const audioRef = useRef(null);
-  const [songs, setSongs] = useState(mixData(data.content.nodes.sort((a, b) => a.name.localeCompare(b.name)).reverse()));
+  const [songs, setSongs] = useState(
+    mixData(
+      data.content.nodes.sort((a, b) => a.name.localeCompare(b.name)).reverse()
+    )
+  );
   const [currentSong, setCurrentSong] = useState(songs[0]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [songInfo, setSongInfo] = useState({
@@ -64,9 +67,26 @@ function QuietCast({data}) {
     return;
   };
   return (
-    <div className={`App ${libraryStatus ? "library-active" : ""}`} >
+    <div className={`App ${libraryStatus ? "library-active" : ""}`}>
       <Helmet>
-      <link rel="icon" href={favicon} />
+        <meta name="title" property="og:title" content="Quiet Cast" />
+
+        <meta property="og:type" content="Website" />
+
+        <meta
+          name="image"
+          property="og:image"
+          content="https://i.ibb.co/2n7f3Bh/Screen-Shot-2021-06-18-at-4-13-27-PM.png"
+        />
+
+        <meta
+          name="description"
+          property="og:description"
+          content="A home for music and interviews with musicians"
+        />
+
+        <meta name="author" content="Rob Lark" />
+        <link rel="icon" href={favicon} />
         <title>Quiet Cast</title>
       </Helmet>
       <Nav libraryStatus={libraryStatus} setLibraryStatus={setLibraryStatus} />
@@ -89,9 +109,9 @@ function QuietCast({data}) {
         isPlaying={isPlaying}
         setSongs={setSongs}
         libraryStatus={libraryStatus}
-				setLibraryStatus={setLibraryStatus}
+        setLibraryStatus={setLibraryStatus}
       />
-      <Interview current={currentSong}/>
+      <Interview current={currentSong} />
       <audio
         onLoadedMetadata={timeUpdateHandler}
         onTimeUpdate={timeUpdateHandler}
@@ -108,213 +128,213 @@ export const query = graphql`
   query InterviewInfo {
     content: allSanityInterview {
       nodes {
-      active
-      id
-      cat
-      artist
-      name
-      color
-      audio {
-        asset {
-          url
-        }
-      }
-      tracklist
-      description
-      answer1
-      answer10
-      answer11
-      answer12
-      answer13
-      answer14
-      answer15
-      answer2
-      answer3
-      answer4
-      answer5
-      answer6
-      answer7
-      answer8
-      answer9
-      question1
-      question10
-      question11
-      question12
-      question13
-      question14
-      question15
-      question2
-      question3
-      question4
-      question5
-      question6
-      question7
-      question8
-      question9
-      style1
-      style10
-      style11
-      style12
-      style13
-      style14
-      style15
-      style2
-      style3
-      style4
-      style5
-      style6
-      style7
-      style8
-      style9
-      imageOfArtist {
-        asset {
-          fixed(width: 200, height: 200) {
-            ...GatsbySanityImageFixed
-          }
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        active
+        id
+        cat
+        artist
+        name
+        color
+        audio {
+          asset {
+            url
           }
         }
-      }
-      cover {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        tracklist
+        description
+        answer1
+        answer10
+        answer11
+        answer12
+        answer13
+        answer14
+        answer15
+        answer2
+        answer3
+        answer4
+        answer5
+        answer6
+        answer7
+        answer8
+        answer9
+        question1
+        question10
+        question11
+        question12
+        question13
+        question14
+        question15
+        question2
+        question3
+        question4
+        question5
+        question6
+        question7
+        question8
+        question9
+        style1
+        style10
+        style11
+        style12
+        style13
+        style14
+        style15
+        style2
+        style3
+        style4
+        style5
+        style6
+        style7
+        style8
+        style9
+        imageOfArtist {
+          asset {
+            fixed(width: 200, height: 200) {
+              ...GatsbySanityImageFixed
+            }
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i1 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        cover {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i2 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        i1 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i3 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        i2 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i4 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        i3 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i5 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        i4 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i6 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        i5 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i7 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        i6 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i8 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        i7 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i9 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        i8 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i10 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        i9 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i11 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        i10 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i12 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        i11 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i13 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        i12 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i14 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        i13 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      i15 {
-        asset {
-          fluid(maxWidth: 1000) {
-            ...GatsbySanityImageFluid
+        i14 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
-      }
-      albumArt {
-        asset {
-          fluid(maxHeight: 1000) {
-            ...GatsbySanityImageFluid
+        i15 {
+          asset {
+            fluid(maxWidth: 1000) {
+              ...GatsbySanityImageFluid
+            }
           }
         }
+        albumArt {
+          asset {
+            fluid(maxHeight: 1000) {
+              ...GatsbySanityImageFluid
+            }
+          }
+        }
+        video1
+        video10
+        video11
+        video12
+        video13
+        video14
+        video15
+        video16
+        video17
+        video18
+        video19
+        video2
+        video3
+        video4
+        video5
+        video6
+        video7
+        video8
+        video9
       }
-      video1
-      video10
-      video11
-      video12
-      video13
-      video14
-      video15
-      video16
-      video17
-      video18
-      video19
-      video2
-      video3
-      video4
-      video5
-      video6
-      video7
-      video8
-      video9
     }
   }
-}
 `;

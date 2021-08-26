@@ -24,7 +24,9 @@ module.exports = {
         plugins: [`gatsby-remark-responsive-iframe`],
       },
     },
-
+    {
+      resolve: `gatsby-plugin-react-helmet`,
+    },
     {
       resolve: `gatsby-plugin-modal-routing`,
       options: {
@@ -34,8 +36,7 @@ module.exports = {
 
         // Object of props that will be passed to the react-modal container
         // See http://reactcommunity.org/react-modal/#usage
-        modalProps: {
-        },
+        modalProps: {},
       },
     },
     {
@@ -51,7 +52,7 @@ module.exports = {
     "gatsby-plugin-sass",
     "gatsby-plugin-styled-components",
     "gatsby-plugin-sharp",
-    'gatsby-plugin-breakpoints',
+    "gatsby-plugin-breakpoints",
     {
       resolve: "gatsby-source-filesystem",
       options: {
