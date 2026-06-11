@@ -11,9 +11,9 @@ export default defineConfig({
   // Astro 6's adapter uses @cloudflare/vite-plugin and auto-reads wrangler.toml,
   // so local binding access (R2, KV) works in `astro dev` with no extra config.
   adapter: cloudflare({
-    // Prerender static pages in Node, not workerd. Our pages are plain HTML
-    // (no CF-runtime APIs at build time), and the workerd prerenderer collides
-    // with the reserved 'ASSETS' binding in a Pages project.
+    // Prerender our static pages in Node instead of the default workerd
+    // runtime — they're plain HTML with no Cloudflare-runtime APIs at build
+    // time, so Node is the simpler, faster prerender path.
     prerenderEnvironment: 'node',
   }),
   integrations: [
