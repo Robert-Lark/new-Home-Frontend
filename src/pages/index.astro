@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { getEpisodes, trackOf, sizedCover } from '../lib/content';
 import ListenState from '../islands/ListenState';
+import LibraryControls from '../islands/LibraryControls';
 
 const episodes = await getEpisodes();
 const queueJson = JSON.stringify(episodes.map(trackOf));
@@ -48,6 +49,14 @@ const queueJson = JSON.stringify(episodes.map(trackOf));
             >
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
             </button>
+            <div class="card-actions">
+              <button class="fav-btn" aria-label={`Favorite ${e.title}`} data-qc-fav-btn data-qc-ref={e.slug}>
+                <svg viewBox="0 0 24 24"><path d="M12 21C12 21 4 13.8 4 8.5 4 5.4 6.4 3 9.5 3 11 3 12 4.2 12 4.2S13 3 14.5 3C17.6 3 20 5.4 20 8.5 20 13.8 12 21 12 21z" /></svg>
+              </button>
+              <button class="pl-btn" aria-label={`Add ${e.title} to a playlist`} data-qc-playlist-btn data-qc-ref={e.slug}>
+                <svg viewBox="0 0 24 24"><path d="M4 7h11M4 12h7M4 17h7M16 13v8M12 17h8" /></svg>
+              </button>
+            </div>
             <span class="state" aria-hidden="true"></span>
           </div>
         );
@@ -58,6 +67,8 @@ const queueJson = JSON.stringify(episodes.map(trackOf));
   {/* Invisible island: recolors cards above by the signed-in user's listen
       state. Logged-out visitors see the neutral grid. */}
   <ListenState client:idle />
+  {/* Inline favorite toggle + add-to-playlist popover (delegated clicks). */}
+  <LibraryControls client:idle />
 </Base>
 
 <style>
@@ -173,6 +184,61 @@ const queueJson = JSON.stringify(episodes.map(trackOf));
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
   }
+  /* Favorite + add-to-playlist cluster, bottom-right; appears on hover/focus.
+     A favorited card keeps its filled heart visible at rest. */
+  .card-actions {
+    position: absolute;
+    right: 9px;
+    bottom: 9px;
+    display: flex;
+    gap: 6px;
+    z-index: 2;
+  }
+  .card-actions button {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    background: rgba(13, 14, 16, 0.66);
+    backdrop-filter: blur(8px);
+    color: var(--ink-2);
+    opacity: 0;
+    transform: translateY(4px);
+    transition:
+      opacity var(--dur-fast) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out);
+  }
+  .card-actions svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .card:hover .card-actions button,
+  .card:focus-within .card-actions button {
+    opacity: 1;
+    transform: none;
+  }
+  .card-actions button:hover {
+    color: var(--ink);
+  }
+  .fav-btn[data-qc-fav='on'] {
+    opacity: 1 !important;
+    transform: none !important;
+    color: var(--ember);
+  }
+  .fav-btn[data-qc-fav='on'] svg {
+    fill: var(--ember);
+    stroke: var(--ember);
+  }
+
   .card .band .t {
     font-family: 'Cormorant Garamond', serif;
     text-transform: uppercase;
