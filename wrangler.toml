@@ -1,0 +1,19 @@
+#:schema node_modules/wrangler/config-schema.json
+# Cloudflare Pages config for the Astro app.
+# `pages_build_output_dir` tells wrangler this is a Pages project (not a Worker).
+name = "quietcast"
+pages_build_output_dir = "./dist"
+compatibility_date = "2025-09-23"
+# Astro's Cloudflare adapter requires the Node.js compat layer for SSR routes.
+compatibility_flags = ["nodejs_compat"]
+
+# R2 binding — gives SSR routes / Pages Functions direct access to the audio
+# bucket (e.g. minting presigned upload URLs in Phase 6) without S3 creds.
+# Public reads still go through cdn.quietcast.art (zero egress), NOT this binding.
+[[r2_buckets]]
+binding = "AUDIO"
+bucket_name = "quietcast-audio"
+
+# Bindings (Supabase keys, R2 S3 creds, Sanity token) are set as Pages
+# environment variables / secrets in the Cloudflare dashboard for the deployed
+# site, and in `.dev.vars` locally (gitignored). See .env.example for the list.

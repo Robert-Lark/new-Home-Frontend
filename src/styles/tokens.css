@@ -1,0 +1,84 @@
+/* Quiet Cast — image-grounded design tokens (source of truth).
+   Grounded in vision analysis of Cryo Chamber / Ant-Zen / HANDS cover art,
+   Burtynsky / Giger / Hsieh fine art, and rendered designer portfolios.
+   The one cross-validated law: exactly ONE warm/saturated accent per view. */
+:root {
+  /* near-black bases (converged: Cryo #101014, Giger #1b1b1c, Ant-Zen #0b0b0b, Hsieh #121212) */
+  --canvas: #0d0e10;
+  --surface-1: #15161a;
+  --surface-2: #1d1f24;
+  --recess: #08090b; /* carved void (Burtynsky dark recess) */
+
+  /* granite ramp (Burtynsky quarries) */
+  --gunmetal: #55565a;
+  --stone: #8b8478;
+  --marble: #c8c4b9;
+
+  /* atmosphere (Cryo swamp fog) */
+  --fog-olive: #8c9272;
+  --fog-teal: #2c4150;
+
+  /* ink — bone, never pure white */
+  --ink: #d9d5c8;
+  --ink-2: #9a9ca0;
+  --ink-3: #6e6e66;
+  --hairline: rgba(217, 213, 200, 0.12);
+  --hairline-soft: rgba(217, 213, 200, 0.06);
+
+  /* the one rationed warm accent — "cold but warm sunrise" */
+  --ember: #b08a5e; /* Burtynsky stone-stain ochre (default warm) */
+  --ember-deep: #6f2b38; /* oxblood — playing/active */
+  --gold: #b08a3a; /* Giger dull gold alt */
+  --steel: #7e8a92; /* cold secondary */
+
+  /* motion (verified: emilkowal.ski) */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 180ms; /* interactive feedback */
+  --dur-page: 320ms; /* page view-transitions / player expand (Sonner principle) */
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* universal film/xerox grain — observed across every label cover.
+   Fixed overlay so it reads as a property of the surface, not the content. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* utility: tracked caps label */
+.eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.34em;
+  font-size: 10px;
+  color: var(--ink-3);
+}
+.mono {
+  font-family: 'IBM Plex Mono', monospace;
+}

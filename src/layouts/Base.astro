@@ -1,0 +1,76 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import PlayerDock from '../islands/PlayerDock';
+import '../styles/tokens.css';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Marks the active nav item. */
+  section?: 'listen' | 'archive' | 'interviews' | 'about' | 'account';
+}
+
+const {
+  title = 'Quiet Cast',
+  description = 'Mixes & interviews from the edge of the signal.',
+  section = 'listen',
+} = Astro.props;
+
+const nav = [
+  { href: '/', label: 'Listen', key: 'listen' },
+  { href: '/archive', label: 'Archive', key: 'archive' },
+  { href: '/interviews', label: 'Interviews', key: 'interviews' },
+  { href: '/about', label: 'About', key: 'about' },
+  { href: '/dashboard', label: 'Account', key: 'account' },
+] as const;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title === 'Quiet Cast' ? title : `${title} — Quiet Cast`}</title>
+    <meta name="description" content={description} />
+
+    <!-- Direction A typeface stack: Cormorant Garamond (display caps),
+         Spectral (body serif), IBM Plex Mono (numbers/labels). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Spectral:ital,wght@0,300;0,400;1,300&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Same-document client router: keeps the audio dock (transition:persist)
+         alive across navigations so playback never stops. Auto-disables
+         animation under prefers-reduced-motion. -->
+    <ClientRouter />
+  </head>
+  <body>
+    <div class="fog" transition:persist></div>
+
+    <header class="site-header">
+      <a href="/" class="brand">Quiet&nbsp;Cast</a>
+      <nav class="site-nav">
+        {
+          nav.map((item) => (
+            <a href={item.href} aria-current={section === item.key ? 'page' : undefined}>
+              {item.label}
+            </a>
+          ))
+        }
+      </nav>
+    </header>
+
+    <main id="main-content">
+      <slot />
+    </main>
+
+    {/* Persistent audio player. The island owns the <audio> element and a
+        delegated [data-qc-play] click listener; transition:persist keeps it —
+        and the playing audio — alive across client-side navigations. */}
+    <PlayerDock client:load transition:persist="player-dock" />
+  </body>
+</html>

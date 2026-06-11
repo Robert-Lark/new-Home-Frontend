@@ -1,0 +1,244 @@
+---
+import Base from '../layouts/Base.astro';
+import { getEpisodes, trackOf, sizedCover } from '../lib/content';
+import ListenState from '../islands/ListenState';
+
+const episodes = await getEpisodes();
+const queueJson = JSON.stringify(episodes.map(trackOf));
+---
+
+<Base section="listen">
+  <section class="hero">
+    <span class="eyebrow">transmission · winter cycle</span>
+    <h1>Cold Light<br />Over the <em>Marsh</em></h1>
+    <p class="sub">Mixes &amp; interviews from the edge of the signal.</p>
+  </section>
+
+  <div class="section-label">
+    <span class="eyebrow">Latest broadcasts</span>
+    <span class="line"></span>
+    <span class="eyebrow">{episodes.length} broadcasts</span>
+  </div>
+
+  <section class="grid">
+    {
+      episodes.map((e) => {
+        const t = trackOf(e);
+        return (
+          <div class="card" data-qc-ref={e.slug}>
+            <a class="card-link" href={`/show/${e.slug}`}>
+              <span class="corner">{e.catLabel}</span>
+              <img src={sizedCover(e.coverUrl, 600)} alt={`${e.title} cover`} loading="lazy" />
+              <div class="band">
+                <div class="t">{e.title}</div>
+                <div class="n">{e.artist.toUpperCase()}</div>
+              </div>
+            </a>
+            <button
+              class="card-play"
+              aria-label={`Play ${e.title}`}
+              data-qc-play
+              data-qc-id={t.id}
+              data-qc-title={t.title}
+              data-qc-artist={t.artist}
+              data-qc-cover={t.cover}
+              data-qc-src={t.src}
+              data-qc-catalog={t.catalog}
+              data-qc-queue={queueJson}
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+            </button>
+            <span class="state" aria-hidden="true"></span>
+          </div>
+        );
+      })
+    }
+  </section>
+
+  {/* Invisible island: recolors cards above by the signed-in user's listen
+      state. Logged-out visitors see the neutral grid. */}
+  <ListenState client:idle />
+</Base>
+
+<style>
+  .hero {
+    padding: 120px 48px 96px;
+    text-align: center;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  .hero .eyebrow {
+    display: block;
+    margin-bottom: 30px;
+  }
+  .hero h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.42em;
+    font-size: clamp(30px, 5vw, 62px);
+    line-height: 1.18;
+    color: var(--ink);
+    padding-left: 0.42em;
+  }
+  .hero h1 em {
+    font-style: italic;
+    letter-spacing: 0.2em;
+    color: var(--stone);
+  }
+  .hero .sub {
+    margin-top: 26px;
+    color: var(--ink-2);
+    font-style: italic;
+    font-size: 18px;
+    letter-spacing: 0.04em;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    padding: 0 48px 200px;
+  }
+  .card {
+    position: relative;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: var(--surface-1);
+  }
+  .card-link {
+    display: block;
+    width: 100%;
+    height: 100%;
+    text-decoration: none;
+  }
+  .card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(0.55) brightness(0.82) contrast(1.05);
+    transition:
+      filter 0.6s var(--ease-out),
+      transform 0.9s var(--ease-out);
+  }
+  .card:hover img {
+    filter: grayscale(0.1) brightness(0.95);
+    transform: scale(1.03);
+  }
+  .card .band {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 16px 16px 14px;
+    background: linear-gradient(to top, rgba(8, 9, 11, 0.86), transparent);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.45s var(--ease-out);
+  }
+  .card:hover .band,
+  .card:focus-within .band {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Play button — sibling of the link (not inside it), so it never collides
+     with ClientRouter's navigation handling. Appears on hover/focus. */
+  .card-play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.92);
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
+    border: none;
+    display: grid;
+    place-items: center;
+    background: var(--ember);
+    color: #0d0e10;
+    cursor: pointer;
+    opacity: 0;
+    transition:
+      opacity var(--dur-fast) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
+  }
+  .card-play svg {
+    width: 20px;
+    height: 20px;
+    margin-left: 2px;
+  }
+  .card:hover .card-play,
+  .card-play:focus-visible {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  .card .band .t {
+    font-family: 'Cormorant Garamond', serif;
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .card .band .n {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--ember);
+    margin-top: 5px;
+  }
+  .card .corner {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    color: var(--ink-2);
+    opacity: 0.7;
+  }
+
+  /* Per-user listen state, painted by the ListenState island via data-qc-state.
+     One warm accent (ember): a live dot for in-progress, a quiet check for done. */
+  .card .state {
+    position: absolute;
+    top: 9px;
+    right: 11px;
+    width: 14px;
+    height: 14px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .card[data-qc-state='in-progress'] .state {
+    opacity: 1;
+    background: var(--ember);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ember) 22%, transparent);
+  }
+  .card[data-qc-state='in-progress'] {
+    outline: 1px solid color-mix(in srgb, var(--ember) 55%, transparent);
+    outline-offset: -1px;
+  }
+  .card[data-qc-state='done'] .state {
+    opacity: 1;
+    border: 1px solid var(--stone);
+  }
+  .card[data-qc-state='done'] .state::after {
+    content: '✓';
+    font-size: 9px;
+    line-height: 1;
+    color: var(--ink-2);
+  }
+  /* "Filed away": a played show reads as visited, less buried in grayscale. */
+  .card[data-qc-state='done'] img {
+    filter: grayscale(0.2) brightness(0.92) contrast(1.05);
+  }
+
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

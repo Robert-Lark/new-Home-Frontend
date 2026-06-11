@@ -1,0 +1,291 @@
+---
+export const prerender = false;
+import Base from '../layouts/Base.astro';
+import { getEpisodes } from '../lib/content';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/login');
+const supabase = Astro.locals.supabase;
+
+// Defensive: tables may not exist yet (before the migration is run), and empty
+// results are normal. Either way we degrade to a clean empty state.
+async function safe(query: PromiseLike<{ data: unknown; error: unknown }>) {
+  try {
+    const { data, error } = await query;
+    return error ? null : data;
+  } catch {
+    return null;
+  }
+}
+
+const profile = (await safe(
+  supabase.from('profiles').select('display_name, created_at').eq('id', user.id).maybeSingle(),
+)) as { display_name?: string; created_at?: string } | null;
+
+const favorites = ((await safe(
+  supabase.from('favorites').select('content_ref, created_at').order('created_at', { ascending: false }),
+)) ?? []) as Array<{ content_ref: string; created_at: string }>;
+
+const listens = ((await safe(
+  supabase
+    .from('listen_status')
+    .select('content_ref, status, progress_seconds, updated_at')
+    .order('updated_at', { ascending: false }),
+)) ?? []) as Array<{ content_ref: string; status: string; progress_seconds: number; updated_at: string }>;
+
+const uploads = ((await safe(
+  supabase.from('user_uploads').select('id, title, status, created_at').order('created_at', { ascending: false }),
+)) ?? []) as Array<{ id: string; title: string; status: string; created_at: string }>;
+
+const posts = ((await safe(
+  supabase.from('posts').select('id, title, slug, status, created_at').order('created_at', { ascending: false }),
+)) ?? []) as Array<{ id: string; title: string; slug: string; status: string; created_at: string }>;
+
+const displayName = profile?.display_name || user.email?.split('@')[0] || 'Listener';
+const memberSince = profile?.created_at
+  ? new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(new Date(profile.created_at))
+  : null;
+const inProgress = listens.filter((l) => l.status === 'playing');
+
+// Resolve content_refs (episode slugs) to titles/links. Episodes are public,
+// CDN-cached Sanity reads — cheap even on this SSR route.
+const episodes = await getEpisodes();
+const epByRef = new Map(episodes.map((e) => [e.slug, e]));
+---
+
+<Base title="Account" section="account">
+  <section class="dash">
+    <header class="dash-head">
+      <div>
+        <span class="eyebrow">Broadcasting from · local time</span>
+        <h1>{displayName}</h1>
+        <p class="dash-email mono">{user.email}{memberSince ? ` · since ${memberSince}` : ''}</p>
+      </div>
+      <form method="POST" action="/auth/signout" data-astro-reload>
+        <button class="dash-signout" type="submit">Sign out</button>
+      </form>
+    </header>
+
+    <div class="dash-grid">
+      <section class="panel">
+        <div class="section-label" style="padding:0;margin:0 0 18px">
+          <span class="eyebrow">Continue listening</span>
+          <span class="line"></span>
+          <span class="eyebrow">{inProgress.length}</span>
+        </div>
+        {
+          inProgress.length === 0 ? (
+            <p class="empty">Nothing in progress. Hit play on a broadcast and it'll wait for you here.</p>
+          ) : (
+            <ul class="rows">
+              {inProgress.map((l) => {
+                const ep = epByRef.get(l.content_ref);
+                const mins = Math.max(1, Math.floor(l.progress_seconds / 60));
+                return (
+                  <li class="row">
+                    {ep ? (
+                      <a class="row-t" href={`/show/${ep.slug}`}>
+                        {ep.title}
+                      </a>
+                    ) : (
+                      <span class="row-t">{l.content_ref}</span>
+                    )}
+                    <span class="row-n mono">{mins} min in</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        }
+      </section>
+
+      <section class="panel">
+        <div class="section-label" style="padding:0;margin:0 0 18px">
+          <span class="eyebrow">Favorites</span>
+          <span class="line"></span>
+          <span class="eyebrow">{favorites.length}</span>
+        </div>
+        {
+          favorites.length === 0 ? (
+            <p class="empty">No favorites yet. Tap the mark on any show to keep it close.</p>
+          ) : (
+            <ul class="rows">
+              {favorites.map((f) => {
+                const ep = epByRef.get(f.content_ref);
+                return (
+                  <li class="row">
+                    {ep ? (
+                      <a class="row-t" href={`/show/${ep.slug}`}>
+                        {ep.title}
+                      </a>
+                    ) : (
+                      <span class="row-t">{f.content_ref}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        }
+      </section>
+
+      <section class="panel">
+        <div class="section-label" style="padding:0;margin:0 0 18px">
+          <span class="eyebrow">My mixtapes</span>
+          <span class="line"></span>
+          <span class="eyebrow">{uploads.length}</span>
+        </div>
+        {
+          uploads.length === 0 ? (
+            <p class="empty">No uploads yet. Upload flow arrives in a later phase.</p>
+          ) : (
+            <ul class="rows">
+              {uploads.map((u) => (
+                <li class="row">
+                  <span class="row-t">{u.title}</span>
+                  <span class="row-n mono">{u.status}</span>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+        <button class="dash-cta" disabled>Upload a mixtape · soon</button>
+      </section>
+
+      <section class="panel">
+        <div class="section-label" style="padding:0;margin:0 0 18px">
+          <span class="eyebrow">My posts</span>
+          <span class="line"></span>
+          <span class="eyebrow">{posts.length}</span>
+        </div>
+        {
+          posts.length === 0 ? (
+            <p class="empty">No posts yet. The editor arrives in a later phase.</p>
+          ) : (
+            <ul class="rows">
+              {posts.map((p) => (
+                <li class="row">
+                  <span class="row-t">{p.title}</span>
+                  <span class="row-n mono">{p.status}</span>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+        <button class="dash-cta" disabled>Write a post · soon</button>
+      </section>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .dash {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 50px 48px 220px;
+  }
+  .dash-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 30px;
+    border-bottom: 1px solid var(--hairline);
+    margin-bottom: 40px;
+  }
+  .dash-head h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: clamp(28px, 4vw, 44px);
+    color: var(--ink);
+    margin: 14px 0 10px;
+  }
+  .dash-email {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--ink-3);
+  }
+  .dash-signout {
+    flex: none;
+    background: none;
+    border: 1px solid var(--hairline);
+    color: var(--ink-2);
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 10px;
+    padding: 11px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .dash-signout:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+  .dash-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px 44px;
+  }
+  .panel {
+    display: flex;
+    flex-direction: column;
+  }
+  .empty {
+    color: var(--ink-3);
+    font-style: italic;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .rows {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+  }
+  .row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--hairline-soft);
+  }
+  .row-t {
+    color: var(--ink);
+    font-size: 15px;
+  }
+  a.row-t {
+    text-decoration: none;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  a.row-t:hover {
+    color: var(--ember);
+  }
+  .row-n {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+  }
+  .dash-cta {
+    align-self: flex-start;
+    margin-top: 18px;
+    background: none;
+    border: 1px dashed var(--hairline);
+    color: var(--ink-3);
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 10px;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: not-allowed;
+  }
+  @media (max-width: 760px) {
+    .dash-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

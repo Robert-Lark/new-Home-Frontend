@@ -1,0 +1,39 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="About" section="about">
+  <section class="placeholder">
+    <span class="eyebrow">About</span>
+    <h1>Quiet Cast</h1>
+    <p>
+      A long-running broadcast of dark ambient, experimental, and techno — mixes, interviews, and a
+      two-hundred-hour archive transmitted from the edge of the signal.
+    </p>
+  </section>
+</Base>
+
+<style>
+  .placeholder {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 140px 48px 220px;
+    text-align: center;
+  }
+  .placeholder h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.36em;
+    font-size: clamp(28px, 4.5vw, 52px);
+    color: var(--ink);
+    margin: 26px 0 20px;
+    padding-left: 0.36em;
+  }
+  .placeholder p {
+    color: var(--ink-2);
+    font-style: italic;
+    font-size: 18px;
+    line-height: 1.7;
+  }
+</style>
