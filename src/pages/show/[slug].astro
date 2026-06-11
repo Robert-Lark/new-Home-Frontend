@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getEpisodes, trackOf, sizedCover } from '../../lib/content';
+import LibraryControls from '../../islands/LibraryControls';
 
 // Static generation: one page per episode, queried from Sanity at build time.
 export async function getStaticPaths() {
@@ -38,6 +39,14 @@ const t = trackOf(episode);
         >
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
           <span>Play broadcast</span>
+        </button>
+        <button class="act-btn fav-btn" data-qc-fav-btn data-qc-ref={episode.slug}>
+          <svg viewBox="0 0 24 24"><path d="M12 21C12 21 4 13.8 4 8.5 4 5.4 6.4 3 9.5 3 11 3 12 4.2 12 4.2S13 3 14.5 3C17.6 3 20 5.4 20 8.5 20 13.8 12 21 12 21z" /></svg>
+          <span>Favorite</span>
+        </button>
+        <button class="act-btn" data-qc-playlist-btn data-qc-ref={episode.slug}>
+          <svg viewBox="0 0 24 24"><path d="M4 7h11M4 12h7M4 17h7M16 13v8M12 17h8" /></svg>
+          <span>Add to playlist</span>
         </button>
       </div>
 
@@ -83,6 +92,9 @@ const t = trackOf(episode);
       </section>
     )
   }
+
+  {/* Inline favorite toggle + add-to-playlist popover (delegated clicks). */}
+  <LibraryControls client:idle />
 </Base>
 
 <style>
@@ -130,7 +142,8 @@ const t = trackOf(episode);
   .show-actions {
     display: flex;
     align-items: center;
-    gap: 22px;
+    flex-wrap: wrap;
+    gap: 14px;
     margin: 34px 0 28px;
   }
   .play-lg {
@@ -155,6 +168,43 @@ const t = trackOf(episode);
   .play-lg svg {
     width: 16px;
     height: 16px;
+  }
+  .act-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 13px 20px;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    background: none;
+    color: var(--ink-2);
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 10px;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .act-btn:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+  .act-btn svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .fav-btn[data-qc-fav='on'] {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+  .fav-btn[data-qc-fav='on'] svg {
+    fill: var(--ember);
+    stroke: var(--ember);
   }
   .desc {
     color: var(--ink-2);

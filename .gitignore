@@ -25,3 +25,6 @@ npm-debug.log*
 .DS_Store
 .vscode/
 .idea/
+
+# claude code — session data + git worktrees live under here; never commit
+.claude/

@@ -8,7 +8,7 @@ interface Props {
   title?: string;
   description?: string;
   /** Marks the active nav item. */
-  section?: 'listen' | 'archive' | 'interviews' | 'about' | 'account';
+  section?: 'listen' | 'archive' | 'interviews' | 'playlists' | 'about' | 'account';
 }
 
 const {
@@ -21,6 +21,7 @@ const nav = [
   { href: '/', label: 'Listen', key: 'listen' },
   { href: '/archive', label: 'Archive', key: 'archive' },
   { href: '/interviews', label: 'Interviews', key: 'interviews' },
+  { href: '/playlists', label: 'Library', key: 'playlists' },
   { href: '/about', label: 'About', key: 'about' },
   { href: '/dashboard', label: 'Account', key: 'account' },
 ] as const;

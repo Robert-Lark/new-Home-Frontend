@@ -128,6 +128,23 @@ export default function PlayerDock() {
     return () => document.removeEventListener('click', onClick);
   }, [load]);
 
+  // Programmatic queue seam for dynamic (authed) sources — favorites and named
+  // playlists. The library islands build a Track[] from current client state
+  // and dispatch `qc:play-queue`; static pages keep using data-qc-queue above.
+  // detail: { tracks: Track[]; startId?: string }
+  useEffect(() => {
+    const onPlayQueue = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { tracks?: Track[]; startId?: string } | undefined;
+      const tracks = detail?.tracks?.filter((t) => t && t.id && t.src) ?? [];
+      if (!tracks.length) return;
+      const start = (detail?.startId && tracks.find((t) => t.id === detail.startId)) || tracks[0];
+      setQueue(tracks);
+      if (start) load(start, true);
+    };
+    document.addEventListener('qc:play-queue', onPlayQueue);
+    return () => document.removeEventListener('qc:play-queue', onPlayQueue);
+  }, [load]);
+
   const toggle = useCallback(() => {
     const a = audioRef.current;
     if (!a || !track) return;
