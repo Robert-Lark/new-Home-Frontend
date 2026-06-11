@@ -21,12 +21,35 @@ export default defineConfig({
     // upload form, post editor). Everything else ships zero JS.
     preact(),
   ],
-  // Pre-bundle Supabase deterministically at startup. These are the first deps
-  // pulled into a *client* island; letting Vite optimize them on-demand causes
-  // a dep-reoptimization race that breaks island hydration in dev.
+  // Pre-bundle every client dep that Vite cannot see in its initial scan.
+  // Astro injects these imports at runtime (island hydration, ClientRouter),
+  // so without `include` they are only discovered on the first browser visit,
+  // which forces a mid-session re-optimization: the deps cache is rewritten
+  // under a new hash and any page already loaded 404s on its island modules.
   vite: {
     optimizeDeps: {
-      include: ['@supabase/ssr', '@supabase/supabase-js'],
+      include: [
+        '@supabase/ssr',
+        '@supabase/supabase-js',
+        // ClientRouter's client module (Base.astro) — injected, never scanned.
+        'astro/virtual-modules/transitions.js',
+        // Dev-only preact graph behind the islands' client-dev entrypoint.
+        // @astrojs/preact pre-bundles the production entries but not these,
+        // so whether they land in the initial scan is a race.
+        'preact/debug',
+        'preact/devtools',
+        'preact/jsx-dev-runtime',
+      ],
+    },
+    environments: {
+      ssr: {
+        optimizeDeps: {
+          // Same problem in the workerd SSR environment (deps_ssr): these two
+          // are discovered on the first render, which reloads the program and
+          // aborts in-flight responses mid-stream.
+          include: ['@astrojs/cloudflare/entrypoints/server', '@astrojs/preact/server.js'],
+        },
+      },
     },
   },
   // Astro 5 typed env — validated at build, satisfies the "Zod at the env
