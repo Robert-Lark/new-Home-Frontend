@@ -35,8 +35,8 @@ export default function LoginForm() {
       <div class="login-sent">
         <p class="login-sent-t">Check your inbox.</p>
         <p class="login-sent-s">
-          We sent a one-time sign-in link to <strong>{email}</strong>. It expires shortly — open it
-          on this device.
+          We sent a one-time link to <strong>{email}</strong> — it logs you in, or creates your
+          account if you're new. It expires shortly, so open it on this device.
         </p>
         <button
           class="login-textlink"

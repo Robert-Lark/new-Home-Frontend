@@ -14,16 +14,17 @@ const errorMsg = rawError
   : null;
 ---
 
-<Base title="Sign in" section="account">
+<Base title="Log in or sign up" section="account">
   <section class="login">
-    <span class="eyebrow">Account</span>
+    <span class="eyebrow">Log in / Sign up</span>
     <h1>Quiet Cast</h1>
     <p class="login-intro">
-      Enter your email and we'll send a one-time sign-in link. No password to remember.
+      Log in or create your account with just your email — we'll send a one-time link. No
+      password to remember.
     </p>
     {errorMsg && <p class="login-error">{errorMsg}</p>}
     <LoginForm client:load />
-    <p class="login-foot mono">New here? Entering your email creates your account.</p>
+    <p class="login-foot mono">Returning? The link logs you in. New here? It creates your account.</p>
   </section>
 </Base>
 
