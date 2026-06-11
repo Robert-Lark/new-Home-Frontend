@@ -1,0 +1,128 @@
+---
+export const prerender = false;
+import Base from '../../layouts/Base.astro';
+import ReportForm from '../../components/ReportForm.astro';
+import { handleReport } from '../../lib/report';
+import { cdnUrl, displayNames, ugcDate } from '../../lib/ugc';
+
+const id = Astro.params.id!;
+const supabase = Astro.locals.supabase;
+const user = Astro.locals.user;
+
+const reportResult = await handleReport(
+  { request: Astro.request, locals: Astro.locals },
+  'photo_album',
+  id,
+);
+
+const { data: album } = await supabase
+  .from('photo_albums')
+  .select('id, user_id, title, venue, event_date, description, status, created_at, photos(id, r2_key, caption, position)')
+  .eq('id', id)
+  .maybeSingle();
+if (!album) return Astro.redirect('/community');
+
+const names = await displayNames(supabase, [album.user_id]);
+const author = names.get(album.user_id) ?? 'a listener';
+const own = user?.id === album.user_id;
+const photos = [...(album.photos ?? [])].sort((a, b) => a.position - b.position);
+const stamp = [album.venue, album.event_date ? ugcDate(album.event_date) : null]
+  .filter(Boolean)
+  .join(' · ');
+---
+
+<Base title={album.title} description={album.description ?? undefined} section="community">
+  <article class="album">
+    <header>
+      <span class="eyebrow">
+        Concert photos · {stamp || ugcDate(album.created_at)}
+        {album.status !== 'published' && <span class="badge">{album.status} — only you can see this</span>}
+      </span>
+      <h1>{album.title}</h1>
+      <p class="byline">by {author}</p>
+      {album.description && <p class="desc">{album.description}</p>}
+    </header>
+
+    <div class="grid">
+      {
+        photos.map((p) => (
+          <figure>
+            <a href={cdnUrl(p.r2_key)} target="_blank" rel="noopener">
+              <img src={cdnUrl(p.r2_key)} alt={p.caption ?? `Photo from ${album.title}`} loading="lazy" />
+            </a>
+            {p.caption && <figcaption class="mono">{p.caption}</figcaption>}
+          </figure>
+        ))
+      }
+    </div>
+
+    {!own && <ReportForm signedIn={Boolean(user)} result={reportResult} />}
+  </article>
+</Base>
+
+<style>
+  .album {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 80px 48px 220px;
+  }
+  .badge {
+    margin-left: 12px;
+    color: var(--ember);
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 18px 0 10px;
+  }
+  .byline {
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    font-size: 11px;
+    color: var(--ember);
+  }
+  .desc {
+    margin-top: 22px;
+    color: var(--ink-2);
+    font-size: 16px;
+    line-height: 1.7;
+    max-width: 56ch;
+  }
+  .grid {
+    margin-top: 44px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  figure {
+    margin: 0;
+  }
+  .grid img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    filter: grayscale(0.35) contrast(1.05);
+    transition: filter var(--dur-fast) var(--ease-out);
+  }
+  .grid a:hover img {
+    filter: none;
+  }
+  figcaption {
+    padding: 8px 2px 14px;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+  }
+  @media (max-width: 760px) {
+    .grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

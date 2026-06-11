@@ -1,0 +1,122 @@
+---
+export const prerender = false;
+import Base from '../../layouts/Base.astro';
+import ReportForm from '../../components/ReportForm.astro';
+import { handleReport } from '../../lib/report';
+import { displayNames, renderMarkdown, ugcDate } from '../../lib/ugc';
+
+const id = Astro.params.id!;
+const supabase = Astro.locals.supabase;
+const user = Astro.locals.user;
+
+const reportResult = await handleReport(
+  { request: Astro.request, locals: Astro.locals },
+  'post',
+  id,
+);
+
+const { data: post } = await supabase
+  .from('posts')
+  .select('id, user_id, title, body_md, status, created_at')
+  .eq('id', id)
+  .maybeSingle();
+if (!post) return Astro.redirect('/community');
+
+const names = await displayNames(supabase, [post.user_id]);
+const author = names.get(post.user_id) ?? 'a listener';
+const own = user?.id === post.user_id;
+const html = renderMarkdown(post.body_md ?? '');
+---
+
+<Base title={post.title} section="community">
+  <article class="post">
+    <header>
+      <span class="eyebrow">
+        Listener writing · {ugcDate(post.created_at)}
+        {post.status !== 'published' && <span class="badge">{post.status} — only you can see this</span>}
+      </span>
+      <h1>{post.title}</h1>
+      <p class="byline">by {author}</p>
+    </header>
+
+    <div class="prose" set:html={html} />
+
+    {!own && <ReportForm signedIn={Boolean(user)} result={reportResult} />}
+  </article>
+</Base>
+
+<style>
+  .post {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 80px 48px 220px;
+  }
+  .badge {
+    margin-left: 12px;
+    color: var(--ember);
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 18px 0 10px;
+  }
+  .byline {
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    font-size: 11px;
+    color: var(--ember);
+    margin-bottom: 44px;
+  }
+
+  /* Rendered markdown (set:html) needs :global selectors. */
+  .prose :global(p) {
+    font-size: 17px;
+    line-height: 1.75;
+    color: var(--ink);
+    margin-bottom: 22px;
+  }
+  .prose :global(h2),
+  .prose :global(h3) {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--ink);
+    margin: 38px 0 16px;
+  }
+  .prose :global(h2) {
+    font-size: 24px;
+  }
+  .prose :global(h3) {
+    font-size: 19px;
+  }
+  .prose :global(ul) {
+    margin: 0 0 22px 20px;
+    color: var(--ink);
+  }
+  .prose :global(li) {
+    font-size: 17px;
+    line-height: 1.7;
+    margin-bottom: 8px;
+  }
+  .prose :global(blockquote) {
+    border-left: 2px solid var(--ember);
+    padding-left: 20px;
+    margin: 0 0 22px;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 19px;
+    line-height: 1.6;
+    color: var(--stone);
+  }
+  .prose :global(a) {
+    color: var(--ember);
+    text-underline-offset: 4px;
+  }
+</style>

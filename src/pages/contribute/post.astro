@@ -1,0 +1,143 @@
+---
+export const prerender = false;
+import Base from '../../layouts/Base.astro';
+import { MAX_PENDING_PER_USER } from '../../lib/ugc';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/login');
+const supabase = Astro.locals.supabase;
+
+// HTML-first: a plain form POSTing back to this page — no island, no client JS.
+let errorMsg: string | null = null;
+let title = '';
+let body = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  title = String(form.get('title') ?? '').trim();
+  body = String(form.get('body') ?? '').trim();
+  const status = form.get('action') === 'draft' ? 'draft' : 'pending';
+
+  if (!title || !body) {
+    errorMsg = 'A title and some writing are both required.';
+  } else if (title.length > 160) {
+    errorMsg = 'Keep the title under 160 characters.';
+  } else if (body.length > 20000) {
+    errorMsg = 'Posts max out at 20,000 characters.';
+  } else {
+    const { count } = await supabase
+      .from('posts')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending');
+    if ((count ?? 0) >= MAX_PENDING_PER_USER) {
+      errorMsg = 'You have posts awaiting review — please wait for those first.';
+    } else {
+      const slugBase =
+        title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 80) || 'post';
+      let { data, error } = await supabase
+        .from('posts')
+        .insert({ user_id: user.id, slug: slugBase, title, body_md: body, status })
+        .select('id')
+        .single();
+      if (error?.code === '23505') {
+        // slug taken by an earlier post of theirs — suffix and retry once
+        ({ data, error } = await supabase
+          .from('posts')
+          .insert({
+            user_id: user.id,
+            slug: `${slugBase}-${crypto.randomUUID().slice(0, 8)}`,
+            title,
+            body_md: body,
+            status,
+          })
+          .select('id')
+          .single());
+      }
+      if (error || !data) {
+        errorMsg = `Couldn't save the post: ${error?.message ?? 'unknown error'}.`;
+      } else {
+        return Astro.redirect(`/posts/${data.id}`, 303);
+      }
+    }
+  }
+}
+---
+
+<Base title="Write a post" section="community">
+  <section class="page">
+    <span class="eyebrow"><a href="/contribute">Contribute</a> · Post</span>
+    <h1>Write a post</h1>
+    <p class="intro">
+      A review, a show report, a piece on a record. Save a draft to keep working, or submit it for
+      review — published posts appear in the community section.
+    </p>
+
+    <form class="ugc-form" method="POST" data-astro-reload>
+      <label class="ugc-label" for="post-title">Title</label>
+      <input
+        id="post-title"
+        class="ugc-input"
+        type="text"
+        name="title"
+        required
+        maxlength="160"
+        placeholder="On the last Bohren record"
+        value={title}
+      />
+
+      <label class="ugc-label" for="post-body">Body</label>
+      <textarea id="post-body" class="ugc-textarea" name="body" required rows="16" maxlength="20000"
+        >{body}</textarea
+      >
+      <p class="ugc-hint mono">
+        Formatting: # heading · **bold** · *italic* · [link](https://…) · "- " lists · "&gt;" quotes
+      </p>
+
+      <div class="actions">
+        <button class="ugc-submit" type="submit" name="action" value="submit">Submit for review</button>
+        <button class="ugc-submit ghost" type="submit" name="action" value="draft">Save as draft</button>
+      </div>
+      {errorMsg && <p class="ugc-error">{errorMsg}</p>}
+    </form>
+  </section>
+</Base>
+
+<style>
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 80px 48px 220px;
+  }
+  .eyebrow a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .eyebrow a:hover {
+    color: var(--ember);
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: clamp(28px, 4vw, 44px);
+    color: var(--ink);
+    margin: 14px 0 12px;
+  }
+  .intro {
+    color: var(--ink-2);
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 38px;
+  }
+  .actions {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+</style>

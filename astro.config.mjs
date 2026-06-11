@@ -61,6 +61,9 @@ export default defineConfig({
       PUBLIC_SUPABASE_URL: envField.string({ context: 'client', access: 'public' }),
       PUBLIC_SUPABASE_ANON_KEY: envField.string({ context: 'client', access: 'public' }),
       SUPABASE_SERVICE_ROLE_KEY: envField.string({ context: 'server', access: 'secret', optional: true }),
+      // One-owner site: moderation routes are gated on this email (locked
+      // decision — a profiles.role column only if multi-moderator is needed).
+      ADMIN_EMAIL: envField.string({ context: 'server', access: 'secret', optional: true }),
 
       // --- Sanity (public editorial CMS, project vcfngr79) ---
       PUBLIC_SANITY_PROJECT_ID: envField.string({ context: 'client', access: 'public', default: 'vcfngr79' }),
