@@ -1,0 +1,204 @@
+---
+export const prerender = false;
+import Base from '../../layouts/Base.astro';
+import ReportForm from '../../components/ReportForm.astro';
+import { handleReport } from '../../lib/report';
+import { cdnUrl, displayNames, ugcDate, durationLabel } from '../../lib/ugc';
+
+const id = Astro.params.id!;
+const supabase = Astro.locals.supabase;
+const user = Astro.locals.user;
+
+const reportResult = await handleReport(
+  { request: Astro.request, locals: Astro.locals },
+  'upload',
+  id,
+);
+
+// RLS: published rows for everyone, plus the author's own pending/rejected.
+const { data: mix } = await supabase
+  .from('user_uploads')
+  .select('id, user_id, title, description, cover_r2_key, tracklist, r2_key, duration, status, created_at')
+  .eq('id', id)
+  .maybeSingle();
+if (!mix) return Astro.redirect('/community');
+
+const names = await displayNames(supabase, [mix.user_id]);
+const author = names.get(mix.user_id) ?? 'a listener';
+const own = user?.id === mix.user_id;
+const cover = mix.cover_r2_key ? cdnUrl(mix.cover_r2_key) : '/images/cryo_01.jpg';
+const tracklist: string[] = Array.isArray(mix.tracklist)
+  ? mix.tracklist.filter((t: unknown): t is string => typeof t === 'string')
+  : [];
+---
+
+<Base title={mix.title} description={mix.description ?? undefined} section="community">
+  <article class="show">
+    <div class="show-cover">
+      <div class="recess"><img src={cover} alt={`${mix.title} cover`} /></div>
+    </div>
+
+    <div class="show-meta">
+      <span class="eyebrow">
+        Listener mix · {ugcDate(mix.created_at)}
+        {mix.status !== 'published' && <span class="badge">{mix.status} — only you can see this</span>}
+      </span>
+      <h1>{mix.title}</h1>
+      <p class="by">{author}</p>
+
+      <div class="show-actions">
+        <button
+          class="play-lg"
+          data-qc-play
+          data-qc-id={mix.id}
+          data-qc-title={mix.title}
+          data-qc-artist={author}
+          data-qc-cover={cover}
+          data-qc-src={cdnUrl(mix.r2_key)}
+          data-qc-duration={durationLabel(mix.duration)}
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+          <span>Play mix</span>
+        </button>
+      </div>
+
+      {mix.description && <p class="desc">{mix.description}</p>}
+
+      {
+        tracklist.length > 0 && (
+          <>
+            <div class="section-label" style="padding:0;margin:34px 0 18px">
+              <span class="eyebrow">Tracklist</span>
+              <span class="line" />
+            </div>
+            <ol class="tracklist">
+              {tracklist.map((track, i) => (
+                <li>
+                  <span class="tl-n mono">{String(i + 1).padStart(2, '0')}</span>
+                  <span class="tl-t">{track}</span>
+                </li>
+              ))}
+            </ol>
+          </>
+        )
+      }
+
+      {!own && <ReportForm signedIn={Boolean(user)} result={reportResult} />}
+    </div>
+  </article>
+</Base>
+
+<style>
+  .show {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 64px;
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 60px 48px 220px;
+    align-items: start;
+  }
+  .recess {
+    padding: 16px;
+    background: var(--recess);
+    border: 1px solid var(--hairline);
+    box-shadow:
+      inset 0 2px 30px rgba(0, 0, 0, 0.9),
+      0 40px 100px -30px rgba(0, 0, 0, 0.9);
+  }
+  .recess img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    filter: grayscale(0.35) contrast(1.05);
+  }
+  .badge {
+    margin-left: 12px;
+    color: var(--ember);
+  }
+  .show-meta h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: clamp(28px, 4vw, 48px);
+    line-height: 1.15;
+    color: var(--ink);
+    margin: 18px 0 10px;
+  }
+  .by {
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    font-size: 11px;
+    color: var(--ember);
+  }
+  .show-actions {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    margin: 34px 0 28px;
+  }
+  .play-lg {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 26px 13px 20px;
+    border: none;
+    border-radius: 999px;
+    background: var(--ember);
+    color: #0d0e10;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 11px;
+    transition: transform var(--dur-fast) var(--ease-out);
+  }
+  .play-lg:hover {
+    transform: translateY(-1px);
+  }
+  .play-lg svg {
+    width: 16px;
+    height: 16px;
+  }
+  .desc {
+    color: var(--ink-2);
+    font-size: 17px;
+    line-height: 1.7;
+    max-width: 56ch;
+    white-space: pre-wrap;
+  }
+  .tracklist {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+  }
+  .tracklist li {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--hairline-soft);
+  }
+  .tl-n {
+    font-size: 10px;
+    color: var(--ink-3);
+    letter-spacing: 0.1em;
+  }
+  .tl-t {
+    font-size: 16px;
+    color: var(--ink);
+  }
+  @media (max-width: 760px) {
+    .show {
+      grid-template-columns: 1fr;
+      gap: 36px;
+      padding-top: 30px;
+    }
+    .show-cover {
+      max-width: 340px;
+    }
+  }
+</style>

@@ -1,0 +1,545 @@
+---
+export const prerender = false;
+import Base from '../../layouts/Base.astro';
+import { isAdmin, createSupabaseAdminClient } from '../../lib/supabase-admin';
+import { cdnUrl, displayNames, durationLabel, renderMarkdown, ugcDate } from '../../lib/ugc';
+
+/**
+ * Owner moderation queue. Gated on ADMIN_EMAIL (404s for everyone else, so
+ * the route doesn't advertise itself); uses the service-role client to see
+ * pending rows across all users and to publish/reject them — the only place
+ * RLS is bypassed.
+ */
+if (!isAdmin(Astro.locals.user)) return new Response(null, { status: 404 });
+
+let admin;
+try {
+  admin = createSupabaseAdminClient();
+} catch {
+  admin = null;
+}
+
+const KIND_TABLE: Record<string, string> = {
+  mix: 'user_uploads',
+  post: 'posts',
+  list: 'lists',
+  album: 'photo_albums',
+};
+
+let actionError: string | null = null;
+if (admin && Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const kind = String(form.get('kind') ?? '');
+  const id = String(form.get('id') ?? '');
+  const action = String(form.get('action') ?? '');
+
+  if (kind === 'report' && (action === 'reviewed' || action === 'dismissed')) {
+    const { error } = await admin.from('reports').update({ status: action }).eq('id', id);
+    actionError = error?.message ?? null;
+  } else if (KIND_TABLE[kind] && (action === 'approve' || action === 'reject')) {
+    const { error } = await admin
+      .from(KIND_TABLE[kind])
+      .update({
+        status: action === 'approve' ? 'published' : 'rejected',
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+    actionError = error?.message ?? null;
+  } else {
+    actionError = 'Unrecognized moderation action.';
+  }
+  if (!actionError) return Astro.redirect('/admin/moderation', 303);
+}
+
+async function pending<T>(query: PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
+  try {
+    const { data, error } = await query;
+    return error || !data ? [] : data;
+  } catch {
+    return [];
+  }
+}
+
+const mixes = admin
+  ? await pending<{
+      id: string;
+      user_id: string;
+      title: string;
+      description: string | null;
+      cover_r2_key: string | null;
+      r2_key: string;
+      duration: number | null;
+      created_at: string;
+    }>(
+      admin
+        .from('user_uploads')
+        .select('id, user_id, title, description, cover_r2_key, r2_key, duration, created_at')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true }),
+    )
+  : [];
+
+const posts = admin
+  ? await pending<{ id: string; user_id: string; title: string; body_md: string | null; created_at: string }>(
+      admin
+        .from('posts')
+        .select('id, user_id, title, body_md, created_at')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true }),
+    )
+  : [];
+
+const lists = admin
+  ? await pending<{
+      id: string;
+      user_id: string;
+      title: string;
+      description: string | null;
+      created_at: string;
+      list_items: Array<{ item_type: string; title: string; note: string | null; url: string | null; position: number }>;
+    }>(
+      admin
+        .from('lists')
+        .select('id, user_id, title, description, created_at, list_items(item_type, title, note, url, position)')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true }),
+    )
+  : [];
+
+const albums = admin
+  ? await pending<{
+      id: string;
+      user_id: string;
+      title: string;
+      venue: string | null;
+      event_date: string | null;
+      description: string | null;
+      created_at: string;
+      photos: Array<{ r2_key: string; position: number }>;
+    }>(
+      admin
+        .from('photo_albums')
+        .select('id, user_id, title, venue, event_date, description, created_at, photos(r2_key, position)')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true }),
+    )
+  : [];
+
+const reports = admin
+  ? await pending<{
+      id: string;
+      reporter_id: string;
+      content_type: string;
+      content_ref: string;
+      reason: string | null;
+      created_at: string;
+    }>(
+      admin
+        .from('reports')
+        .select('id, reporter_id, content_type, content_ref, reason, created_at')
+        .eq('status', 'open')
+        .order('created_at', { ascending: true }),
+    )
+  : [];
+
+const names = admin
+  ? await displayNames(admin, [
+      ...mixes.map((m) => m.user_id),
+      ...posts.map((p) => p.user_id),
+      ...lists.map((l) => l.user_id),
+      ...albums.map((a) => a.user_id),
+      ...reports.map((r) => r.reporter_id),
+    ])
+  : new Map<string, string>();
+const by = (uid: string) => names.get(uid) ?? uid.slice(0, 8);
+
+/** Where a report's content lives on the site + which kind takes it down. */
+const REPORT_TARGET: Record<string, { path: string; kind: string } | undefined> = {
+  upload: { path: '/mixes/', kind: 'mix' },
+  post: { path: '/posts/', kind: 'post' },
+  list: { path: '/lists/', kind: 'list' },
+  photo_album: { path: '/photos/', kind: 'album' },
+};
+
+const queueSize = mixes.length + posts.length + lists.length + albums.length;
+---
+
+<Base title="Moderation" section="account">
+  <section class="mod">
+    <header class="head">
+      <div>
+        <span class="eyebrow">Curator only</span>
+        <h1>Moderation</h1>
+      </div>
+      <span class="eyebrow">{queueSize} awaiting · {reports.length} reports</span>
+    </header>
+
+    {!admin && <p class="warn">SUPABASE_SERVICE_ROLE_KEY isn't configured — the queue can't load.</p>}
+    {actionError && <p class="warn">{actionError}</p>}
+
+    {
+      admin && queueSize === 0 && reports.length === 0 && (
+        <p class="empty">Queue's clear. Nothing awaiting review.</p>
+      )
+    }
+
+    {
+      mixes.length > 0 && (
+        <>
+          <div class="section-label"><span class="eyebrow">Mixes</span><span class="line" /><span class="eyebrow">{mixes.length}</span></div>
+          {mixes.map((m) => (
+            <div class="item">
+              <img class="thumb" src={m.cover_r2_key ? cdnUrl(m.cover_r2_key) : '/images/cryo_01.jpg'} alt="" loading="lazy" />
+              <div class="meta">
+                <span class="t">{m.title}</span>
+                <span class="s mono">{by(m.user_id)} · {ugcDate(m.created_at)}{durationLabel(m.duration) ? ` · ${durationLabel(m.duration)}` : ''}</span>
+                {m.description && <p class="d">{m.description}</p>}
+                <button
+                  class="listen mono"
+                  data-qc-play
+                  data-qc-id={m.id}
+                  data-qc-title={m.title}
+                  data-qc-artist={by(m.user_id)}
+                  data-qc-cover={m.cover_r2_key ? cdnUrl(m.cover_r2_key) : '/images/cryo_01.jpg'}
+                  data-qc-src={cdnUrl(m.r2_key)}
+                >
+                  ▶ Listen
+                </button>
+              </div>
+              <div class="acts">
+                <form method="POST" data-astro-reload>
+                  <input type="hidden" name="kind" value="mix" />
+                  <input type="hidden" name="id" value={m.id} />
+                  <button class="ok" name="action" value="approve">Publish</button>
+                  <button class="no" name="action" value="reject">Reject</button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </>
+      )
+    }
+
+    {
+      posts.length > 0 && (
+        <>
+          <div class="section-label"><span class="eyebrow">Writing</span><span class="line" /><span class="eyebrow">{posts.length}</span></div>
+          {posts.map((p) => (
+            <div class="item">
+              <div class="meta">
+                <span class="t">{p.title}</span>
+                <span class="s mono">{by(p.user_id)} · {ugcDate(p.created_at)}</span>
+                <details>
+                  <summary class="mono">Read</summary>
+                  <div class="prose" set:html={renderMarkdown(p.body_md ?? '')} />
+                </details>
+              </div>
+              <div class="acts">
+                <form method="POST" data-astro-reload>
+                  <input type="hidden" name="kind" value="post" />
+                  <input type="hidden" name="id" value={p.id} />
+                  <button class="ok" name="action" value="approve">Publish</button>
+                  <button class="no" name="action" value="reject">Reject</button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </>
+      )
+    }
+
+    {
+      lists.length > 0 && (
+        <>
+          <div class="section-label"><span class="eyebrow">Lists</span><span class="line" /><span class="eyebrow">{lists.length}</span></div>
+          {lists.map((l) => (
+            <div class="item">
+              <div class="meta">
+                <span class="t">{l.title}</span>
+                <span class="s mono">{by(l.user_id)} · {ugcDate(l.created_at)}</span>
+                {l.description && <p class="d">{l.description}</p>}
+                <ul class="mini">
+                  {[...l.list_items].sort((a, b) => a.position - b.position).map((it) => (
+                    <li>
+                      <span class="mono kind">{it.item_type}</span> {it.title}
+                      {it.note && <span class="s"> — {it.note}</span>}
+                      {it.url && (
+                        <a class="s" href={it.url} rel="nofollow noopener" target="_blank"> ↗</a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div class="acts">
+                <form method="POST" data-astro-reload>
+                  <input type="hidden" name="kind" value="list" />
+                  <input type="hidden" name="id" value={l.id} />
+                  <button class="ok" name="action" value="approve">Publish</button>
+                  <button class="no" name="action" value="reject">Reject</button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </>
+      )
+    }
+
+    {
+      albums.length > 0 && (
+        <>
+          <div class="section-label"><span class="eyebrow">Concert photos</span><span class="line" /><span class="eyebrow">{albums.length}</span></div>
+          {albums.map((a) => (
+            <div class="item">
+              <div class="meta">
+                <span class="t">{a.title}</span>
+                <span class="s mono">
+                  {by(a.user_id)} · {[a.venue, a.event_date ? ugcDate(a.event_date) : null].filter(Boolean).join(' · ') || ugcDate(a.created_at)} · {a.photos.length} photos
+                </span>
+                {a.description && <p class="d">{a.description}</p>}
+                <div class="photo-strip">
+                  {[...a.photos].sort((x, y) => x.position - y.position).map((p) => (
+                    <a href={cdnUrl(p.r2_key)} target="_blank" rel="noopener">
+                      <img src={cdnUrl(p.r2_key)} alt="" loading="lazy" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+              <div class="acts">
+                <form method="POST" data-astro-reload>
+                  <input type="hidden" name="kind" value="album" />
+                  <input type="hidden" name="id" value={a.id} />
+                  <button class="ok" name="action" value="approve">Publish</button>
+                  <button class="no" name="action" value="reject">Reject</button>
+                </form>
+              </div>
+            </div>
+          ))}
+        </>
+      )
+    }
+
+    {
+      reports.length > 0 && (
+        <>
+          <div class="section-label"><span class="eyebrow">Reports</span><span class="line" /><span class="eyebrow">{reports.length}</span></div>
+          {reports.map((r) => {
+            const target = REPORT_TARGET[r.content_type];
+            return (
+              <div class="item">
+                <div class="meta">
+                  <span class="t">
+                    {r.content_type}
+                    {target ? (
+                      <a class="s" href={`${target.path}${r.content_ref}`}> · view ↗</a>
+                    ) : (
+                      <span class="s"> · {r.content_ref}</span>
+                    )}
+                  </span>
+                  <span class="s mono">reported by {by(r.reporter_id)} · {ugcDate(r.created_at)}</span>
+                  {r.reason && <p class="d">"{r.reason}"</p>}
+                </div>
+                <div class="acts">
+                  {target && (
+                    <form method="POST" data-astro-reload>
+                      <input type="hidden" name="kind" value={target.kind} />
+                      <input type="hidden" name="id" value={r.content_ref} />
+                      <button class="no" name="action" value="reject">Take down</button>
+                    </form>
+                  )}
+                  <form method="POST" data-astro-reload>
+                    <input type="hidden" name="kind" value="report" />
+                    <input type="hidden" name="id" value={r.id} />
+                    <button class="ok" name="action" value="reviewed">Mark reviewed</button>
+                    <button class="no ghost" name="action" value="dismissed">Dismiss</button>
+                  </form>
+                </div>
+              </div>
+            );
+          })}
+        </>
+      )
+    }
+  </section>
+</Base>
+
+<style>
+  .mod {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 50px 48px 220px;
+  }
+  .head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 30px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: clamp(28px, 4vw, 44px);
+    color: var(--ink);
+    margin-top: 14px;
+  }
+  .section-label {
+    padding: 0;
+    margin: 40px 0 8px;
+  }
+  .warn {
+    margin-top: 30px;
+    color: var(--ember-deep);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+  }
+  .empty {
+    margin-top: 40px;
+    color: var(--ink-3);
+    font-style: italic;
+    font-size: 16px;
+  }
+  .item {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--hairline-soft);
+  }
+  .thumb {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    flex: none;
+    filter: grayscale(0.35) contrast(1.05);
+  }
+  .meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .t {
+    color: var(--ink);
+    font-size: 16px;
+  }
+  .t a {
+    color: var(--ink-3);
+    text-decoration: none;
+  }
+  .t a:hover {
+    color: var(--ember);
+  }
+  .s {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+  }
+  .d {
+    color: var(--ink-2);
+    font-size: 14px;
+    line-height: 1.6;
+    max-width: 60ch;
+  }
+  .listen {
+    align-self: flex-start;
+    margin-top: 4px;
+    background: none;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    color: var(--ink-2);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    cursor: pointer;
+  }
+  .listen:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+  .mini {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    color: var(--ink-2);
+    font-size: 14px;
+  }
+  .kind {
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .photo-strip {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .photo-strip img {
+    width: 84px;
+    height: 84px;
+    object-fit: cover;
+    display: block;
+  }
+  details summary {
+    cursor: pointer;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .prose {
+    margin-top: 12px;
+    max-width: 60ch;
+  }
+  .prose :global(p),
+  .prose :global(li) {
+    color: var(--ink-2);
+    font-size: 14px;
+    line-height: 1.65;
+    margin-bottom: 12px;
+  }
+  .acts {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .acts form {
+    display: flex;
+    gap: 8px;
+  }
+  .acts button {
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 9px;
+    padding: 9px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .acts .ok {
+    background: var(--ember);
+    border: 1px solid var(--ember);
+    color: #0d0e10;
+  }
+  .acts .ok:hover {
+    transform: translateY(-1px);
+  }
+  .acts .no {
+    background: none;
+    border: 1px solid var(--hairline);
+    color: var(--ink-2);
+  }
+  .acts .no:hover {
+    border-color: var(--ember-deep);
+    color: var(--ember-deep);
+  }
+</style>

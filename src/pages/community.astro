@@ -1,0 +1,353 @@
+---
+export const prerender = false;
+import Base from '../layouts/Base.astro';
+import { cdnUrl, displayNames, ugcDate, durationLabel } from '../lib/ugc';
+
+/**
+ * The community shelf: everything listeners have contributed that the curator
+ * has published. Anonymous-readable — RLS lets published rows through without
+ * a session.
+ */
+const supabase = Astro.locals.supabase;
+const signedIn = Boolean(Astro.locals.user);
+
+// Defensive: tables may not exist until the 0002 migration runs.
+async function safe<T>(query: PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
+  try {
+    const { data, error } = await query;
+    return error || !data ? [] : data;
+  } catch {
+    return [];
+  }
+}
+
+const FALLBACK_COVER = '/images/cryo_01.jpg';
+
+const mixes = await safe<{
+  id: string;
+  user_id: string;
+  title: string;
+  cover_r2_key: string | null;
+  duration: number | null;
+  created_at: string;
+}>(
+  supabase
+    .from('user_uploads')
+    .select('id, user_id, title, cover_r2_key, duration, created_at')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(12),
+);
+
+const posts = await safe<{ id: string; user_id: string; title: string; created_at: string }>(
+  supabase
+    .from('posts')
+    .select('id, user_id, title, created_at')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(12),
+);
+
+const lists = await safe<{
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  created_at: string;
+}>(
+  supabase
+    .from('lists')
+    .select('id, user_id, title, description, created_at')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(12),
+);
+
+const albums = await safe<{
+  id: string;
+  user_id: string;
+  title: string;
+  venue: string | null;
+  event_date: string | null;
+  created_at: string;
+  photos: Array<{ r2_key: string; position: number }>;
+}>(
+  supabase
+    .from('photo_albums')
+    .select('id, user_id, title, venue, event_date, created_at, photos(r2_key, position)')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(12),
+);
+
+const names = await displayNames(supabase, [
+  ...mixes.map((m) => m.user_id),
+  ...posts.map((p) => p.user_id),
+  ...lists.map((l) => l.user_id),
+  ...albums.map((a) => a.user_id),
+]);
+const by = (uid: string) => names.get(uid) ?? 'a listener';
+
+const albumThumb = (a: (typeof albums)[number]) => {
+  const first = [...a.photos].sort((x, y) => x.position - y.position)[0];
+  return first ? cdnUrl(first.r2_key) : FALLBACK_COVER;
+};
+
+const empty = mixes.length + posts.length + lists.length + albums.length === 0;
+---
+
+<Base
+  title="Community"
+  description="Mixes, writing, lists, and concert photos from Quiet Cast listeners."
+  section="community"
+>
+  <section class="community">
+    <header class="head">
+      <div>
+        <span class="eyebrow">From the listeners</span>
+        <h1>Community</h1>
+      </div>
+      <a class="cta" href={signedIn ? '/contribute' : '/login'}>Contribute</a>
+    </header>
+
+    {
+      empty && (
+        <p class="empty">
+          Nothing published yet. Be first —{' '}
+          <a href={signedIn ? '/contribute' : '/login'}>upload a mix, write a post, make a list, or share concert photos</a>.
+        </p>
+      )
+    }
+
+    {
+      mixes.length > 0 && (
+        <>
+          <div class="section-label">
+            <span class="eyebrow">Mixes</span>
+            <span class="line" />
+            <span class="eyebrow">{mixes.length}</span>
+          </div>
+          <div class="mix-grid">
+            {mixes.map((m) => (
+              <a class="mix" href={`/mixes/${m.id}`}>
+                <img
+                  src={m.cover_r2_key ? cdnUrl(m.cover_r2_key) : FALLBACK_COVER}
+                  alt=""
+                  loading="lazy"
+                />
+                <span class="mix-t">{m.title}</span>
+                <span class="mix-b mono">
+                  {by(m.user_id)}
+                  {durationLabel(m.duration) ? ` · ${durationLabel(m.duration)}` : ''}
+                </span>
+              </a>
+            ))}
+          </div>
+        </>
+      )
+    }
+
+    {
+      posts.length > 0 && (
+        <>
+          <div class="section-label">
+            <span class="eyebrow">Writing</span>
+            <span class="line" />
+            <span class="eyebrow">{posts.length}</span>
+          </div>
+          <ul class="rows">
+            {posts.map((p) => (
+              <li>
+                <a class="row-t" href={`/posts/${p.id}`}>
+                  {p.title}
+                </a>
+                <span class="row-n mono">
+                  {by(p.user_id)} · {ugcDate(p.created_at)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )
+    }
+
+    {
+      lists.length > 0 && (
+        <>
+          <div class="section-label">
+            <span class="eyebrow">Lists</span>
+            <span class="line" />
+            <span class="eyebrow">{lists.length}</span>
+          </div>
+          <ul class="rows">
+            {lists.map((l) => (
+              <li>
+                <a class="row-t" href={`/lists/${l.id}`}>
+                  {l.title}
+                </a>
+                <span class="row-n mono">{by(l.user_id)}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )
+    }
+
+    {
+      albums.length > 0 && (
+        <>
+          <div class="section-label">
+            <span class="eyebrow">Concert photos</span>
+            <span class="line" />
+            <span class="eyebrow">{albums.length}</span>
+          </div>
+          <div class="album-grid">
+            {albums.map((a) => (
+              <a class="album" href={`/photos/${a.id}`}>
+                <img src={albumThumb(a)} alt="" loading="lazy" />
+                <span class="mix-t">{a.title}</span>
+                <span class="mix-b mono">
+                  {a.venue ? `${a.venue} · ` : ''}
+                  {a.event_date ? ugcDate(a.event_date) : by(a.user_id)}
+                </span>
+              </a>
+            ))}
+          </div>
+        </>
+      )
+    }
+  </section>
+</Base>
+
+<style>
+  .community {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 50px 48px 220px;
+  }
+  .head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 30px;
+    border-bottom: 1px solid var(--hairline);
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: clamp(28px, 4vw, 44px);
+    color: var(--ink);
+    margin-top: 14px;
+  }
+  .cta {
+    flex: none;
+    border: 1px solid var(--hairline);
+    color: var(--ink-2);
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 10px;
+    padding: 11px 18px;
+    border-radius: 999px;
+    text-decoration: none;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .cta:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+  .section-label {
+    padding: 0;
+    margin: 44px 0 20px;
+  }
+  .empty {
+    margin-top: 40px;
+    color: var(--ink-3);
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .empty a {
+    color: var(--ink-2);
+  }
+
+  .mix-grid,
+  .album-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .mix,
+  .album {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-decoration: none;
+    padding-bottom: 14px;
+  }
+  .mix img,
+  .album img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+    filter: grayscale(0.35) contrast(1.05);
+    transition: filter var(--dur-fast) var(--ease-out);
+  }
+  .mix:hover img,
+  .album:hover img {
+    filter: none;
+  }
+  .mix-t {
+    margin-top: 6px;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .mix-b {
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+  }
+
+  .rows {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+  }
+  .rows li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--hairline-soft);
+  }
+  .row-t {
+    color: var(--ink);
+    font-size: 16px;
+    text-decoration: none;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .row-t:hover {
+    color: var(--ember);
+  }
+  .row-n {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 860px) {
+    .mix-grid,
+    .album-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

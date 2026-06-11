@@ -1,0 +1,161 @@
+---
+export const prerender = false;
+import Base from '../../layouts/Base.astro';
+import ReportForm from '../../components/ReportForm.astro';
+import { handleReport } from '../../lib/report';
+import { displayNames, ugcDate } from '../../lib/ugc';
+
+const id = Astro.params.id!;
+const supabase = Astro.locals.supabase;
+const user = Astro.locals.user;
+
+const reportResult = await handleReport(
+  { request: Astro.request, locals: Astro.locals },
+  'list',
+  id,
+);
+
+const { data: list } = await supabase
+  .from('lists')
+  .select('id, user_id, title, description, status, created_at, list_items(id, item_type, title, note, url, position)')
+  .eq('id', id)
+  .maybeSingle();
+if (!list) return Astro.redirect('/community');
+
+const names = await displayNames(supabase, [list.user_id]);
+const author = names.get(list.user_id) ?? 'a listener';
+const own = user?.id === list.user_id;
+const items = [...(list.list_items ?? [])].sort((a, b) => a.position - b.position);
+---
+
+<Base title={list.title} description={list.description ?? undefined} section="community">
+  <article class="list">
+    <header>
+      <span class="eyebrow">
+        Listener list · {ugcDate(list.created_at)}
+        {list.status !== 'published' && <span class="badge">{list.status} — only you can see this</span>}
+      </span>
+      <h1>{list.title}</h1>
+      <p class="byline">by {author}</p>
+      {list.description && <p class="desc">{list.description}</p>}
+    </header>
+
+    <ol class="entries">
+      {
+        items.map((item, i) => (
+          <li>
+            <span class="n mono">{String(i + 1).padStart(2, '0')}</span>
+            <div class="entry">
+              <span class="entry-head">
+                <span class="t">
+                  {item.url ? (
+                    <a href={item.url} rel="nofollow noopener ugc" target="_blank">
+                      {item.title}
+                    </a>
+                  ) : (
+                    item.title
+                  )}
+                </span>
+                <span class="kind mono">{item.item_type}</span>
+              </span>
+              {item.note && <span class="note">{item.note}</span>}
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+
+    {!own && <ReportForm signedIn={Boolean(user)} result={reportResult} />}
+  </article>
+</Base>
+
+<style>
+  .list {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 80px 48px 220px;
+  }
+  .badge {
+    margin-left: 12px;
+    color: var(--ember);
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: clamp(28px, 4vw, 44px);
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 18px 0 10px;
+  }
+  .byline {
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    font-size: 11px;
+    color: var(--ember);
+  }
+  .desc {
+    margin-top: 22px;
+    color: var(--ink-2);
+    font-size: 16px;
+    line-height: 1.7;
+    max-width: 56ch;
+  }
+  .entries {
+    list-style: none;
+    margin-top: 44px;
+    display: flex;
+    flex-direction: column;
+  }
+  .entries li {
+    display: flex;
+    gap: 20px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--hairline-soft);
+  }
+  .n {
+    font-size: 10px;
+    color: var(--ink-3);
+    letter-spacing: 0.1em;
+    padding-top: 4px;
+  }
+  .entry {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .entry-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .t,
+  .t a {
+    font-size: 17px;
+    color: var(--ink);
+  }
+  .t a {
+    text-underline-offset: 4px;
+  }
+  .t a:hover {
+    color: var(--ember);
+  }
+  .kind {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 2px 9px;
+  }
+  .note {
+    color: var(--ink-2);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+</style>
