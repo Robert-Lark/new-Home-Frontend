@@ -14,10 +14,12 @@ export default function PhotoUploadForm() {
   const [eventDate, setEventDate] = useState('');
   const [description, setDescription] = useState('');
   const [files, setFiles] = useState<File[]>([]);
+  const [visibility, setVisibility] = useState<'published' | 'private'>('published');
   const [status, setStatus] = useState<Status>('idle');
   const [doneCount, setDoneCount] = useState(0);
   const [progress, setProgress] = useState(0);
   const [msg, setMsg] = useState('');
+  const [savedId, setSavedId] = useState<string | null>(null);
 
   const fail = (m: string) => {
     setStatus('error');
@@ -49,8 +51,10 @@ export default function PhotoUploadForm() {
     const uid = session.session?.user?.id;
     if (!uid) return fail('Your session expired — sign in again and retry.');
 
-    // Album row first (status defaults to 'pending'), then photos attach to it
-    // one by one so a mid-batch failure keeps what already made it.
+    // Album row first, ALWAYS private, then photos attach one by one; only a
+    // complete album flips to the chosen visibility. A mid-batch failure
+    // keeps what already made it — visible to the author alone, never a
+    // half-album on the community shelf.
     const { data: album, error: albumError } = await supabase
       .from('photo_albums')
       .insert({
@@ -59,10 +63,12 @@ export default function PhotoUploadForm() {
         venue: venue.trim() || null,
         event_date: eventDate || null,
         description: description.trim() || null,
+        status: 'private',
       })
       .select('id')
       .single();
     if (albumError || !album) return fail(`Couldn't create the album: ${albumError?.message ?? 'unknown error'}.`);
+    setSavedId(album.id);
 
     // Local counter: state captured by this closure goes stale across awaits.
     let completed = 0;
@@ -79,20 +85,39 @@ export default function PhotoUploadForm() {
       }
     } catch (err) {
       return fail(
-        `${err instanceof Error ? err.message : 'Upload failed.'} ${completed} of ${files.length} photos made it — the album is still in your queue.`,
+        `${err instanceof Error ? err.message : 'Upload failed.'} ${completed} of ${files.length} photos made it — the album is saved, private, on your account.`,
       );
+    }
+    if (visibility === 'published') {
+      const { error } = await supabase
+        .from('photo_albums')
+        .update({ status: 'published' })
+        .eq('id', album.id);
+      if (error)
+        return fail('The photos are all up, but publishing failed — flip the album public from its page.');
     }
     setStatus('done');
   };
 
   if (status === 'done') {
+    const href = savedId ? `/photos/${savedId}` : '/dashboard';
     return (
       <div class="ugc-success">
-        <p class="ugc-success-t">Submitted for review.</p>
+        <p class="ugc-success-t">{visibility === 'published' ? "It's live." : 'Saved — private.'}</p>
         <p class="ugc-success-s">
-          <strong>{title}</strong> ({files.length} photo{files.length === 1 ? '' : 's'}) is in the
-          moderation queue — it goes public once the curator approves it. Track its status from
-          your <a href="/dashboard">account</a>.
+          {visibility === 'published' ? (
+            <>
+              <strong>{title}</strong> ({files.length} photo{files.length === 1 ? '' : 's'}) is on the
+              community shelf now — <a href={href}>have a look</a>. You can make it private again from
+              its page.
+            </>
+          ) : (
+            <>
+              <strong>{title}</strong> ({files.length} photo{files.length === 1 ? '' : 's'}) is up,
+              visible only to you. Publish it any time from <a href={href}>its page</a> or your{' '}
+              <a href="/dashboard">account</a>.
+            </>
+          )}
         </p>
       </div>
     );
@@ -172,6 +197,30 @@ export default function PhotoUploadForm() {
         </p>
       )}
 
+      <fieldset class="ugc-vis" disabled={busy}>
+        <legend class="ugc-label">Visibility</legend>
+        <label>
+          <input
+            type="radio"
+            name="visibility"
+            value="published"
+            checked={visibility === 'published'}
+            onChange={() => setVisibility('published')}
+          />
+          <span><b>Public</b> — on the community shelf and your profile once every photo is up.</span>
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="visibility"
+            value="private"
+            checked={visibility === 'private'}
+            onChange={() => setVisibility('private')}
+          />
+          <span><b>Private</b> — only you can see it. Flip it later from the album's page.</span>
+        </label>
+      </fieldset>
+
       {busy && (
         <div class="ugc-progress" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
           <i style={`width:${Math.round(progress * 100)}%`}></i>
@@ -182,7 +231,7 @@ export default function PhotoUploadForm() {
       )}
 
       <button class="ugc-submit" type="submit" disabled={busy}>
-        {busy ? `Uploading ${doneCount + 1} of ${files.length}…` : 'Submit for review'}
+        {busy ? `Uploading ${doneCount + 1} of ${files.length}…` : 'Upload the album'}
       </button>
       {status === 'error' && <p class="ugc-error">{msg}</p>}
     </form>

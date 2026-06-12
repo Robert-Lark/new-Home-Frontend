@@ -652,6 +652,32 @@ a {
   letter-spacing: 0.08em;
   margin-top: 4px;
 }
+/* visibility choice — same anatomy as the settings radios */
+.ugc-vis {
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ugc-vis legend {
+  margin-bottom: 10px;
+}
+.ugc-vis label {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.ugc-vis input {
+  accent-color: var(--ember);
+}
+.ugc-vis b {
+  font-weight: 400;
+  color: var(--ink);
+}
 .ugc-hint {
   font-size: 10px;
   letter-spacing: 0.12em;

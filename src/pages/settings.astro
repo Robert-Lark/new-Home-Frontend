@@ -20,8 +20,8 @@ const supabase = Astro.locals.supabase;
 const episodes = await getEpisodes();
 const epByRef = new Map(episodes.map((e) => [e.slug, e]));
 
-// Published only: a pending mix as the profile song would surface
-// unmoderated audio on a public page.
+// Published only: a private mix as the profile song would leak private
+// audio on a public page.
 const myMixes = await safeRows<{ id: string; title: string }>(
   supabase
     .from('user_uploads')

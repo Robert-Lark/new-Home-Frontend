@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Base from '../../layouts/Base.astro';
-import { MAX_PENDING_PER_USER } from '../../lib/ugc';
+import { MAX_CREATED_PER_DAY } from '../../lib/ugc';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/login');
@@ -16,7 +16,8 @@ if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
   title = String(form.get('title') ?? '').trim();
   body = String(form.get('body') ?? '').trim();
-  const status = form.get('action') === 'draft' ? 'draft' : 'pending';
+  // Visibility is the author's call — private means only they see it.
+  const status = form.get('visibility') === 'private' ? 'private' : 'published';
 
   if (!title || !body) {
     errorMsg = 'A title and some writing are both required.';
@@ -25,12 +26,15 @@ if (Astro.request.method === 'POST') {
   } else if (body.length > 20000) {
     errorMsg = 'Posts max out at 20,000 characters.';
   } else {
+    // Abuse brake: 24h creation cap. Explicit user filter — the select
+    // policy is own-or-published, so an unfiltered count sees everyone.
     const { count } = await supabase
       .from('posts')
       .select('id', { count: 'exact', head: true })
-      .eq('status', 'pending');
-    if ((count ?? 0) >= MAX_PENDING_PER_USER) {
-      errorMsg = 'You have posts awaiting review — please wait for those first.';
+      .eq('user_id', user.id)
+      .gte('created_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString());
+    if ((count ?? 0) >= MAX_CREATED_PER_DAY) {
+      errorMsg = 'Daily cap reached — twenty new pieces in 24 hours. Come back tomorrow.';
     } else {
       const slugBase =
         title
@@ -72,8 +76,9 @@ if (Astro.request.method === 'POST') {
     <span class="eyebrow"><a href="/contribute">Contribute</a> · Post</span>
     <h1>Write a post</h1>
     <p class="intro">
-      A review, a show report, a piece on a record. Save a draft to keep working, or submit it for
-      review — published posts appear in the community section.
+      A review, a show report, a piece on a record. Public posts land in the community section the
+      moment you post them; private ones stay yours until you flip them — from the post's page,
+      any time.
     </p>
 
     <form class="ugc-form" method="POST" data-astro-reload>
@@ -97,10 +102,19 @@ if (Astro.request.method === 'POST') {
         Formatting: # heading · **bold** · *italic* · [link](https://…) · "- " lists · "&gt;" quotes
       </p>
 
-      <div class="actions">
-        <button class="ugc-submit" type="submit" name="action" value="submit">Submit for review</button>
-        <button class="ugc-submit ghost" type="submit" name="action" value="draft">Save as draft</button>
-      </div>
+      <fieldset class="ugc-vis">
+        <legend class="ugc-label">Visibility</legend>
+        <label>
+          <input type="radio" name="visibility" value="published" checked />
+          <span><b>Public</b> — on the community shelf and your profile.</span>
+        </label>
+        <label>
+          <input type="radio" name="visibility" value="private" />
+          <span><b>Private</b> — only you can see it. Flip it later from the post's page.</span>
+        </label>
+      </fieldset>
+
+      <button class="ugc-submit" type="submit">Post it</button>
       {errorMsg && <p class="ugc-error">{errorMsg}</p>}
     </form>
   </section>
@@ -134,10 +148,5 @@ if (Astro.request.method === 'POST') {
     font-size: 16px;
     line-height: 1.6;
     margin-bottom: 38px;
-  }
-  .actions {
-    display: flex;
-    gap: 14px;
-    align-items: center;
   }
 </style>

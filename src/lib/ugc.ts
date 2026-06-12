@@ -15,8 +15,8 @@ export const MIX_MAX_BYTES = 250 * 1024 * 1024;
 export const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 /** Max photos per album upload. */
 export const ALBUM_MAX_PHOTOS = 24;
-/** Abuse brake: refuse new submissions while this many are already pending. */
-export const MAX_PENDING_PER_USER = 20;
+/** Abuse brake: refuse new pieces once this many were created in the trailing 24h. */
+export const MAX_CREATED_PER_DAY = 20;
 
 export const AUDIO_TYPES: Record<string, string> = {
   'audio/mpeg': 'mp3',

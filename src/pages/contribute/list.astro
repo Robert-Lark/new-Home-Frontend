@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Base from '../../layouts/Base.astro';
-import { LIST_ITEM_TYPES, MAX_PENDING_PER_USER } from '../../lib/ugc';
+import { LIST_ITEM_TYPES, MAX_CREATED_PER_DAY } from '../../lib/ugc';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/login');
@@ -49,16 +49,20 @@ if (Astro.request.method === 'POST') {
   } else if (badUrl) {
     errorMsg = 'Links must start with http:// or https://.';
   } else {
+    // Abuse brake: 24h creation cap. Explicit user filter — the select
+    // policy is own-or-published, so an unfiltered count sees everyone.
     const { count } = await supabase
       .from('lists')
       .select('id', { count: 'exact', head: true })
-      .eq('status', 'pending');
-    if ((count ?? 0) >= MAX_PENDING_PER_USER) {
-      errorMsg = 'You have lists awaiting review — please wait for those first.';
+      .eq('user_id', user.id)
+      .gte('created_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString());
+    if ((count ?? 0) >= MAX_CREATED_PER_DAY) {
+      errorMsg = 'Daily cap reached — twenty new pieces in 24 hours. Come back tomorrow.';
     } else {
+      const status = form.get('visibility') === 'private' ? 'private' : 'published';
       const { data: list, error } = await supabase
         .from('lists')
-        .insert({ user_id: user.id, title, description: description || null })
+        .insert({ user_id: user.id, title, description: description || null, status })
         .select('id')
         .single();
       if (error || !list) {
@@ -83,8 +87,8 @@ if (Astro.request.method === 'POST') {
     <span class="eyebrow"><a href="/contribute">Contribute</a> · List</span>
     <h1>Make a list</h1>
     <p class="intro">
-      Favorite records, artists, labels, shows — whatever the canon is tonight. Lists go public
-      after the curator approves them.
+      Favorite records, artists, labels, shows — whatever the canon is tonight. Public lists go
+      straight to the community shelf; private ones stay yours until you flip them.
     </p>
 
     <form class="ugc-form" method="POST" data-astro-reload>
@@ -138,7 +142,19 @@ if (Astro.request.method === 'POST') {
       </template>
       <button id="list-add-row" class="ugc-submit ghost" type="button" hidden>+ Another entry</button>
 
-      <button class="ugc-submit" type="submit">Submit for review</button>
+      <fieldset class="ugc-vis">
+        <legend class="ugc-label">Visibility</legend>
+        <label>
+          <input type="radio" name="visibility" value="published" checked />
+          <span><b>Public</b> — on the community shelf and your profile.</span>
+        </label>
+        <label>
+          <input type="radio" name="visibility" value="private" />
+          <span><b>Private</b> — only you can see it. Flip it later from the list's page.</span>
+        </label>
+      </fieldset>
+
+      <button class="ugc-submit" type="submit">Make the list</button>
       {errorMsg && <p class="ugc-error">{errorMsg}</p>}
     </form>
   </section>

@@ -29,9 +29,11 @@ export default function MixUploadForm() {
   const [tracklist, setTracklist] = useState('');
   const [audio, setAudio] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
+  const [visibility, setVisibility] = useState<'published' | 'private'>('published');
   const [status, setStatus] = useState<Status>('idle');
   const [progress, setProgress] = useState(0);
   const [msg, setMsg] = useState('');
+  const [savedId, setSavedId] = useState<string | null>(null);
 
   const fail = (m: string) => {
     setStatus('error');
@@ -67,18 +69,24 @@ export default function MixUploadForm() {
         .map((t) => t.trim())
         .filter(Boolean);
 
-      // Status defaults to 'pending' (RLS rejects anything else).
-      const { error } = await supabase.from('user_uploads').insert({
-        user_id: uid,
-        title: title.trim(),
-        description: description.trim() || null,
-        tracklist: tracks,
-        r2_key: audioObj.key,
-        cover_r2_key: coverObj?.key ?? null,
-        duration,
-        mime: audio.type,
-      });
-      if (error) return fail(`The file uploaded but saving its details failed: ${error.message}`);
+      // Status is the author's visibility choice (RLS allows private/published).
+      const { data, error } = await supabase
+        .from('user_uploads')
+        .insert({
+          user_id: uid,
+          title: title.trim(),
+          description: description.trim() || null,
+          tracklist: tracks,
+          r2_key: audioObj.key,
+          cover_r2_key: coverObj?.key ?? null,
+          duration,
+          mime: audio.type,
+          status: visibility,
+        })
+        .select('id')
+        .single();
+      if (error || !data) return fail(`The file uploaded but saving its details failed: ${error?.message ?? 'unknown error'}`);
+      setSavedId(data.id);
       setStatus('done');
     } catch (err) {
       fail(err instanceof Error ? err.message : 'Upload failed — try again.');
@@ -86,12 +94,22 @@ export default function MixUploadForm() {
   };
 
   if (status === 'done') {
+    const href = savedId ? `/mixes/${savedId}` : '/dashboard';
     return (
       <div class="ugc-success">
-        <p class="ugc-success-t">Submitted for review.</p>
+        <p class="ugc-success-t">{visibility === 'published' ? "It's live." : 'Saved — private.'}</p>
         <p class="ugc-success-s">
-          <strong>{title}</strong> is in the moderation queue — it goes public once the curator
-          approves it. Track its status from your <a href="/dashboard">account</a>.
+          {visibility === 'published' ? (
+            <>
+              <strong>{title}</strong> is on the community shelf now — <a href={href}>have a look</a>. You
+              can make it private again from its page.
+            </>
+          ) : (
+            <>
+              <strong>{title}</strong> is up, visible only to you. Publish it any time from{' '}
+              <a href={href}>its page</a> or your <a href="/dashboard">account</a>.
+            </>
+          )}
         </p>
       </div>
     );
@@ -161,6 +179,30 @@ export default function MixUploadForm() {
         disabled={busy}
       />
 
+      <fieldset class="ugc-vis" disabled={busy}>
+        <legend class="ugc-label">Visibility</legend>
+        <label>
+          <input
+            type="radio"
+            name="visibility"
+            value="published"
+            checked={visibility === 'published'}
+            onChange={() => setVisibility('published')}
+          />
+          <span><b>Public</b> — on the community shelf and your profile.</span>
+        </label>
+        <label>
+          <input
+            type="radio"
+            name="visibility"
+            value="private"
+            checked={visibility === 'private'}
+            onChange={() => setVisibility('private')}
+          />
+          <span><b>Private</b> — only you can see it. Flip it later from the mix's page.</span>
+        </label>
+      </fieldset>
+
       {status === 'uploading' && (
         <div class="ugc-progress" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}>
           <i style={`width:${Math.round(progress * 100)}%`}></i>
@@ -169,7 +211,7 @@ export default function MixUploadForm() {
       )}
 
       <button class="ugc-submit" type="submit" disabled={busy}>
-        {status === 'uploading' ? 'Uploading…' : status === 'saving' ? 'Saving…' : 'Submit for review'}
+        {status === 'uploading' ? 'Uploading…' : status === 'saving' ? 'Saving…' : 'Upload the mix'}
       </button>
       {status === 'error' && <p class="ugc-error">{msg}</p>}
     </form>

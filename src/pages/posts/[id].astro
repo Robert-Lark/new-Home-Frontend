@@ -2,18 +2,27 @@
 export const prerender = false;
 import Base from '../../layouts/Base.astro';
 import ReportForm from '../../components/ReportForm.astro';
-import { handleReport } from '../../lib/report';
+import VisibilityToggle from '../../components/VisibilityToggle.astro';
+import { handleReport, setVisibility } from '../../lib/report';
 import { displayNames, publicProfileIds, renderMarkdown, ugcDate } from '../../lib/ugc';
 
 const id = Astro.params.id!;
 const supabase = Astro.locals.supabase;
 const user = Astro.locals.user;
 
-const reportResult = await handleReport(
-  { request: Astro.request, locals: Astro.locals },
-  'post',
-  id,
-);
+// One formData read, dispatched on `action`: the owner's visibility toggle
+// (PRG on success) or a report.
+let reportResult: { ok: boolean; message: string } | null = null;
+let visError: string | null = null;
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  if (form.get('action') === 'set-visibility') {
+    visError = await setVisibility(Astro.locals, 'posts', id, form);
+    if (!visError) return Astro.redirect(`/posts/${id}`, 303);
+  } else {
+    reportResult = await handleReport(form, Astro.locals, 'post', id);
+  }
+}
 
 const { data: post } = await supabase
   .from('posts')
@@ -36,10 +45,17 @@ const html = renderMarkdown(post.body_md ?? '');
     <header>
       <span class="eyebrow">
         Listener writing · {ugcDate(post.created_at)}
-        {post.status !== 'published' && <span class="badge">{post.status} — only you can see this</span>}
+        {
+          post.status !== 'published' && (
+            <span class="badge">
+              {post.status === 'removed' ? 'removed by the curator' : post.status} — only you can see this
+            </span>
+          )
+        }
       </span>
       <h1>{post.title}</h1>
       <p class="byline">by {authorHref ? <a href={authorHref}>{author}</a> : author}</p>
+      {own && <VisibilityToggle status={post.status} error={visError} />}
     </header>
 
     <div class="prose" set:html={html} />

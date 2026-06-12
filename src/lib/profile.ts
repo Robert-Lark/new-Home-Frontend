@@ -8,8 +8,8 @@ import type { ConnectionKind } from './connections';
  * Shared data layer for the profile pages: the logged-in dashboard and the
  * public /u/<id> view assemble the same shapes from different scopes (own
  * everything vs. published-only — RLS already hides private rows from
- * visitors; the publishedOnly filters here keep drafts out of a user's OWN
- * public preview too).
+ * visitors; the publishedOnly filters here keep private pieces out of a
+ * user's OWN public preview too).
  */
 
 export interface ProfileRow {
@@ -44,7 +44,7 @@ export interface ActivityEvent {
   text: string;
   href: string | null;
   at: string;
-  /** Own view only: moderation status worth surfacing ("pending", "draft"). */
+  /** Own view only: visibility worth surfacing ("private", "removed"). */
   note?: string;
 }
 

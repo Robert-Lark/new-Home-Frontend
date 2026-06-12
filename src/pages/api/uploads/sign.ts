@@ -8,7 +8,7 @@ import {
   IMAGE_TYPES,
   MIX_MAX_BYTES,
   IMAGE_MAX_BYTES,
-  MAX_PENDING_PER_USER,
+  MAX_CREATED_PER_DAY,
   cdnUrl,
 } from '../../../lib/ugc';
 
@@ -59,16 +59,19 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return json(413, { error: `Too large — the limit is ${Math.floor(maxBytes / (1024 * 1024))}MB.` });
   }
 
-  // Abuse brake: pause new submissions while a pile is already awaiting
-  // review. RLS scopes these counts to the signed-in user.
+  // Abuse brake: cap creations in the trailing 24h (self-publish has no
+  // queue to count). The explicit user filter matters — the select policy is
+  // own-OR-published, so an unfiltered count would include everyone else's
+  // published work.
   const supabase = locals.supabase;
+  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   const [uploads, albums] = await Promise.all([
-    supabase.from('user_uploads').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-    supabase.from('photo_albums').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabase.from('user_uploads').select('id', { count: 'exact', head: true }).eq('user_id', user.id).gte('created_at', since),
+    supabase.from('photo_albums').select('id', { count: 'exact', head: true }).eq('user_id', user.id).gte('created_at', since),
   ]);
-  const pendingCount = (uploads.count ?? 0) + (albums.count ?? 0);
-  if (pendingCount >= MAX_PENDING_PER_USER) {
-    return json(429, { error: 'You have submissions awaiting review — please wait for those first.' });
+  const recentCount = (uploads.count ?? 0) + (albums.count ?? 0);
+  if (recentCount >= MAX_CREATED_PER_DAY) {
+    return json(429, { error: 'Daily cap reached — twenty new pieces in 24 hours. Come back tomorrow.' });
   }
 
   const key = `user/${user.id}/${kind}/${crypto.randomUUID()}.${ext}`;

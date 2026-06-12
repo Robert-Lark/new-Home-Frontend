@@ -4,9 +4,8 @@ import Base from '../layouts/Base.astro';
 import { cdnUrl, displayNames, publicProfileIds, ugcDate, durationLabel } from '../lib/ugc';
 
 /**
- * The community shelf: everything listeners have contributed that the curator
- * has published. Anonymous-readable — RLS lets published rows through without
- * a session.
+ * The community shelf: everything listeners have chosen to publish.
+ * Anonymous-readable — RLS lets published rows through without a session.
  */
 const supabase = Astro.locals.supabase;
 const signedIn = Boolean(Astro.locals.user);

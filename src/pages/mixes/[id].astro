@@ -2,20 +2,29 @@
 export const prerender = false;
 import Base from '../../layouts/Base.astro';
 import ReportForm from '../../components/ReportForm.astro';
-import { handleReport } from '../../lib/report';
+import VisibilityToggle from '../../components/VisibilityToggle.astro';
+import { handleReport, setVisibility } from '../../lib/report';
 import { cdnUrl, displayNames, publicProfileIds, ugcDate, durationLabel } from '../../lib/ugc';
 
 const id = Astro.params.id!;
 const supabase = Astro.locals.supabase;
 const user = Astro.locals.user;
 
-const reportResult = await handleReport(
-  { request: Astro.request, locals: Astro.locals },
-  'upload',
-  id,
-);
+// One formData read, dispatched on `action`: the owner's visibility toggle
+// (PRG on success) or a report.
+let reportResult: { ok: boolean; message: string } | null = null;
+let visError: string | null = null;
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  if (form.get('action') === 'set-visibility') {
+    visError = await setVisibility(Astro.locals, 'user_uploads', id, form);
+    if (!visError) return Astro.redirect(`/mixes/${id}`, 303);
+  } else {
+    reportResult = await handleReport(form, Astro.locals, 'upload', id);
+  }
+}
 
-// RLS: published rows for everyone, plus the author's own pending/rejected.
+// RLS: published rows for everyone, plus everything of the author's own.
 const { data: mix } = await supabase
   .from('user_uploads')
   .select('id, user_id, title, description, cover_r2_key, tracklist, r2_key, duration, status, created_at')
@@ -44,7 +53,13 @@ const tracklist: string[] = Array.isArray(mix.tracklist)
     <div class="show-meta">
       <span class="eyebrow">
         Listener mix · {ugcDate(mix.created_at)}
-        {mix.status !== 'published' && <span class="badge">{mix.status} — only you can see this</span>}
+        {
+          mix.status !== 'published' && (
+            <span class="badge">
+              {mix.status === 'removed' ? 'removed by the curator' : mix.status} — only you can see this
+            </span>
+          )
+        }
       </span>
       <h1>{mix.title}</h1>
       <p class="by">{authorHref ? <a href={authorHref}>{author}</a> : author}</p>
@@ -63,6 +78,7 @@ const tracklist: string[] = Array.isArray(mix.tracklist)
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
           <span>Play mix</span>
         </button>
+        {own && <VisibilityToggle status={mix.status} error={visError} />}
       </div>
 
       {mix.description && <p class="desc">{mix.description}</p>}
