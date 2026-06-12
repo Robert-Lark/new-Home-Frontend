@@ -52,7 +52,24 @@ src/
     tokens.css            design tokens — source of truth ("Cold Ember / Granite Liturgy")
     global.css            chrome, fog, dock, view transitions
 public/images/            reference cover art (temporary; real art comes from Sanity)
+studio/                   Sanity Content Studio — schemas + config (see Studio below)
 ```
+
+## Studio (Sanity CMS)
+
+The editorial CMS lives in `studio/` (folded in from the retired
+[new-Home-Backend](https://github.com/Robert-Lark/new-Home-Backend) repo).
+Studio schemas and the GROQ projections in `src/lib/content.ts` must change
+together — that's why they share a repo.
+
+- Run locally: `cd studio && npm install && npm start` (Sanity v2 studio;
+  upgrade to a `sanity.config.ts` studio is planned with the Phase 3
+  content remodel)
+- Deploy: `cd studio && npx sanity deploy` — manual, independent of the
+  Cloudflare build
+- Cloudflare Workers Builds should skip studio-only commits: in the
+  dashboard under **Settings → Build → Build watch paths**, exclude
+  `studio/*` (one-time manual step)
 
 ## Design
 
