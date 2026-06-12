@@ -1,0 +1,746 @@
+---
+import type { Track } from '../islands/PlayerDock';
+import type { CatalogEntry } from '../lib/connections';
+import type { ActivityEvent, Connection, NewsItem } from '../lib/profile';
+import { ugcDate } from '../lib/ugc';
+
+/**
+ * Shared profile shell, old-web "top friends" anatomy in the site's own
+ * vocabulary: profile card top-left, module boxes down the left column
+ * (account, site news, slot "side"), and the main column with the bio blurb,
+ * latest-activity list, and the connections grid. Used by /dashboard
+ * (editable) and /u/[id] (read-only). Grid edits are plain POST forms handled
+ * by the dashboard page — no JS beyond the existing player island.
+ */
+interface Props {
+  editable: boolean;
+  profileId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  memberSince: string | null;
+  /** Own view only — never passed on the public route. */
+  email?: string | null;
+  statusLine?: string | null;
+  bio?: string | null;
+  isPublic: boolean;
+  song: Track | null;
+  connections: Connection[];
+  /** Catalog entries still addable (editable views only). */
+  catalog?: CatalogEntry[];
+  gridFull?: boolean;
+  activity: ActivityEvent[];
+  news: NewsItem[];
+  showAdminLink?: boolean;
+  /** Notice strip for owners previewing their public page. */
+  previewBanner?: string;
+}
+
+const {
+  editable,
+  profileId,
+  displayName,
+  avatarUrl,
+  memberSince,
+  email = null,
+  statusLine = null,
+  bio = null,
+  isPublic,
+  song,
+  connections,
+  catalog = [],
+  gridFull = false,
+  activity,
+  news,
+  showAdminLink = false,
+  previewBanner,
+} = Astro.props;
+
+const initial = (displayName.trim()[0] ?? 'Q').toUpperCase();
+---
+
+<section class="profile">
+  {previewBanner && <p class="p-banner mono">{previewBanner}</p>}
+
+  <div class="p-cols">
+    <aside class="p-side">
+      <div class="p-box p-card">
+        {
+          avatarUrl ? (
+            <img class="p-avatar" src={avatarUrl} alt={`${displayName}'s profile picture`} />
+          ) : (
+            <div class="p-avatar p-avatar-fallback" aria-hidden="true">{initial}</div>
+          )
+        }
+        <div class="p-card-body">
+          <h1 class="p-name">{displayName}</h1>
+          <span class="p-kind mono">listener{isPublic ? '' : ' · private'}</span>
+          {statusLine && <p class="p-status">“{statusLine}”</p>}
+          <ul class="p-meta mono">
+            {memberSince && <li>Tuned in since {memberSince}</li>}
+            {email && <li>{email}</li>}
+          </ul>
+          {
+            song && song.src && (
+              <button
+                class="p-song"
+                data-qc-play
+                data-qc-id={song.id}
+                data-qc-title={song.title}
+                data-qc-artist={song.artist}
+                data-qc-cover={song.cover}
+                data-qc-src={song.src}
+                data-qc-catalog={song.catalog}
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+                <span class="p-song-meta">
+                  <i class="mono">Profile signal</i>
+                  <b>{song.title}</b>
+                </span>
+              </button>
+            )
+          }
+          {
+            editable && (
+              <div class="p-card-acts">
+                <a href="/settings">Edit profile</a>
+                <a href={`/u/${profileId}`}>View public page</a>
+              </div>
+            )
+          }
+        </div>
+      </div>
+
+      {
+        editable && (
+          <div class="p-box">
+            <h2 class="p-box-h eyebrow">Account</h2>
+            <div class="p-admin">
+              <a href="/settings">Settings</a>
+              {showAdminLink && <a href="/admin/moderation">Moderation</a>}
+              <form method="POST" action="/auth/signout" data-astro-reload>
+                <button type="submit">Sign out</button>
+              </form>
+            </div>
+          </div>
+        )
+      }
+
+      <slot name="side" />
+
+      {
+        news.length > 0 && (
+          <div class="p-box">
+            <h2 class="p-box-h eyebrow">Meanwhile on Quiet Cast</h2>
+            <ul class="p-news">
+              {news.map((n) => (
+                <li>
+                  <a href={n.href}>
+                    <span class="p-news-k mono">{n.kind}</span>
+                    <span class="p-news-t">{n.title}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+    </aside>
+
+    <div class="p-main">
+      {
+        (bio || editable) && (
+          <section>
+            <div class="section-label p-label">
+              <span class="eyebrow">About</span>
+              <span class="line" />
+            </div>
+            {bio ? (
+              <p class="p-bio">{bio}</p>
+            ) : (
+              <p class="p-empty">
+                Say who's broadcasting — <a href="/settings">add a bio</a>.
+              </p>
+            )}
+          </section>
+        )
+      }
+
+      <section>
+        <div class="section-label p-label">
+          <span class="eyebrow">Latest activity</span>
+          <span class="line"></span>
+          <span class="eyebrow">{activity.length}</span>
+        </div>
+        {
+          activity.length === 0 ? (
+            <p class="p-empty">
+              All quiet so far{editable ? ' — play a broadcast, pin a connection, upload a mix.' : '.'}
+            </p>
+          ) : (
+            <ul class="p-act">
+              {activity.map((e) => (
+                <li>
+                  <span class="p-act-k mono">{e.kind}</span>
+                  {e.href ? (
+                    <a class="p-act-t" href={e.href}>{e.text}</a>
+                  ) : (
+                    <span class="p-act-t">{e.text}</span>
+                  )}
+                  {e.note && <span class="p-act-note mono">{e.note}</span>}
+                  <span class="p-act-d mono">{ugcDate(e.at)}</span>
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </section>
+
+      <section>
+        <div class="section-label p-label">
+          <span class="eyebrow">{displayName}’s grid</span>
+          <span class="line"></span>
+          <span class="eyebrow">{connections.length}</span>
+        </div>
+        {
+          connections.length === 0 ? (
+            <p class="p-empty">
+              {editable
+                ? 'Nothing pinned yet. The grid is for the artists, labels, and places that shape your listening.'
+                : 'Nothing pinned yet.'}
+            </p>
+          ) : (
+            <ul class="p-grid">
+              {connections.map((c) => (
+                <li class="p-tile">
+                  <a
+                    class="p-tile-link"
+                    href={c.link_url ?? undefined}
+                    target={c.link_url ? '_blank' : undefined}
+                    rel={c.link_url ? 'noopener' : undefined}
+                  >
+                    {c.image_url ? (
+                      <img src={c.image_url} alt="" loading="lazy" />
+                    ) : (
+                      <div class="p-tile-fallback" aria-hidden="true">{c.name[0]}</div>
+                    )}
+                    <span class="p-tile-n">{c.name}</span>
+                    <span class="p-chip mono">{c.kind}</span>
+                  </a>
+                  {editable && (
+                    <form method="POST">
+                      <input type="hidden" name="action" value="remove-connection" />
+                      <input type="hidden" name="id" value={c.id} />
+                      <button class="p-tile-x mono" type="submit" aria-label={`Unpin ${c.name}`}>×</button>
+                    </form>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )
+        }
+        {
+          editable && !gridFull && catalog.length > 0 && (
+            <details class="p-add">
+              <summary class="mono">Pin to the grid</summary>
+              <ul class="p-add-panel">
+                {catalog.map((entry) => (
+                  <li>
+                    <form method="POST">
+                      <input type="hidden" name="action" value="add-connection" />
+                      <input type="hidden" name="slug" value={entry.slug} />
+                      <button class="p-add-row" type="submit">
+                        <img src={entry.image} alt="" loading="lazy" />
+                        <span class="p-add-n">{entry.name}</span>
+                        <span class="p-chip mono">{entry.kind}</span>
+                        <span class="p-add-plus mono" aria-hidden="true">+</span>
+                      </button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )
+        }
+        {editable && gridFull && <p class="p-hint mono">Grid full — unpin something to make room.</p>}
+      </section>
+
+      <slot name="manage" />
+    </div>
+  </div>
+</section>
+
+<style>
+  .profile {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 40px 48px 220px;
+  }
+  .p-banner {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin-bottom: 28px;
+  }
+  .p-cols {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 44px;
+    align-items: start;
+  }
+
+  /* ---- Left column: module boxes ---- */
+  .p-side {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+  .p-box {
+    border: 1px solid var(--hairline);
+    background: var(--surface-1);
+  }
+  .p-box-h {
+    display: block;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--hairline);
+    font-weight: 400;
+  }
+
+  /* profile card */
+  .p-avatar {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-bottom: 1px solid var(--hairline);
+    filter: grayscale(0.25) contrast(1.04);
+    background: var(--recess);
+  }
+  .p-avatar-fallback {
+    display: grid;
+    place-items: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: 110px;
+    color: var(--ink-3);
+    box-shadow: inset 0 2px 30px rgba(0, 0, 0, 0.7);
+  }
+  .p-card-body {
+    padding: 18px 16px 20px;
+  }
+  .p-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 24px;
+    line-height: 1.2;
+    color: var(--ink);
+  }
+  .p-kind {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 9px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+  .p-status {
+    margin-top: 12px;
+    font-style: italic;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--ink-2);
+  }
+  .p-meta {
+    list-style: none;
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .p-meta li {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+    overflow-wrap: anywhere;
+  }
+  .p-song {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin-top: 16px;
+    padding: 10px 12px;
+    background: none;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color var(--dur-fast) var(--ease-out);
+  }
+  .p-song:hover {
+    border-color: var(--ember);
+  }
+  .p-song svg {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    padding: 6px;
+    border-radius: 999px;
+    background: var(--ember);
+    color: #0d0e10;
+  }
+  .p-song-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .p-song-meta i {
+    font-style: normal;
+    font-size: 8px;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .p-song-meta b {
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .p-card-acts {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .p-card-acts a {
+    flex: 1;
+    text-align: center;
+    text-decoration: none;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 9px 8px;
+    color: var(--ink-2);
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 9px;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .p-card-acts a:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+
+  /* account box */
+  .p-admin {
+    display: flex;
+    flex-direction: column;
+  }
+  .p-admin a,
+  .p-admin button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--hairline-soft);
+    padding: 11px 14px;
+    color: var(--ink-2);
+    text-decoration: none;
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 10px;
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .p-admin > :last-child,
+  .p-admin > :last-child button {
+    border-bottom: none;
+  }
+  .p-admin a:hover,
+  .p-admin button:hover {
+    color: var(--ember);
+  }
+
+  /* site news */
+  .p-news {
+    list-style: none;
+  }
+  .p-news a {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--hairline-soft);
+    text-decoration: none;
+  }
+  .p-news li:last-child a {
+    border-bottom: none;
+  }
+  .p-news-k {
+    font-size: 8px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+  .p-news-t {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--ink);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .p-news a:hover .p-news-t {
+    color: var(--ember);
+  }
+
+  /* ---- Main column ---- */
+  .p-main {
+    display: flex;
+    flex-direction: column;
+    gap: 38px;
+    min-width: 0;
+  }
+  .p-label {
+    padding: 0;
+    margin: 0 0 16px;
+  }
+  .p-bio {
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--ink);
+    white-space: pre-line;
+  }
+  .p-empty {
+    color: var(--ink-3);
+    font-style: italic;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .p-empty a {
+    color: var(--ink-2);
+  }
+  .p-hint {
+    margin-top: 14px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+  }
+
+  /* activity */
+  .p-act {
+    list-style: none;
+  }
+  .p-act li {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--hairline-soft);
+  }
+  .p-act-k {
+    flex: none;
+    width: 78px;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+  .p-act-t {
+    min-width: 0;
+    font-size: 15px;
+    color: var(--ink);
+    text-decoration: none;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  a.p-act-t:hover {
+    color: var(--ember);
+  }
+  .p-act-note {
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+  .p-act-d {
+    margin-left: auto;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  /* connections grid */
+  .p-grid {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .p-tile {
+    position: relative;
+  }
+  .p-tile-link {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-decoration: none;
+    padding-bottom: 12px;
+  }
+  .p-tile-link img,
+  .p-tile-fallback {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+    border: 1px solid var(--hairline);
+    filter: grayscale(0.35) contrast(1.05);
+    transition: filter var(--dur-fast) var(--ease-out);
+  }
+  .p-tile-link:hover img {
+    filter: none;
+  }
+  .p-tile-fallback {
+    display: grid;
+    place-items: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 52px;
+    color: var(--ink-3);
+    background: var(--surface-2);
+  }
+  .p-tile-n {
+    margin-top: 4px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .p-chip {
+    align-self: flex-start;
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--steel);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+  .p-tile-x {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: rgba(8, 9, 11, 0.72);
+    color: var(--ink-2);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .p-tile-x:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+
+  /* add-to-grid dropdown (plain <details> — no island) */
+  .p-add {
+    margin-top: 18px;
+  }
+  .p-add summary {
+    display: inline-block;
+    list-style: none;
+    cursor: pointer;
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 10px 16px;
+    color: var(--ink-2);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 10px;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .p-add summary::-webkit-details-marker {
+    display: none;
+  }
+  .p-add summary::after {
+    content: ' ▾';
+  }
+  .p-add[open] summary,
+  .p-add summary:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+  .p-add-panel {
+    list-style: none;
+    margin-top: 10px;
+    max-width: 460px;
+    border: 1px solid var(--hairline);
+    background: var(--surface-1);
+  }
+  .p-add-panel li + li {
+    border-top: 1px solid var(--hairline-soft);
+  }
+  .p-add-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 10px 14px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .p-add-row:hover {
+    background: var(--surface-2);
+  }
+  .p-add-row img {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+    filter: grayscale(0.35);
+  }
+  .p-add-n {
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .p-add-plus {
+    margin-left: auto;
+    font-size: 14px;
+    color: var(--ink-3);
+  }
+  .p-add-row:hover .p-add-plus {
+    color: var(--ember);
+  }
+
+  @media (max-width: 920px) {
+    .profile {
+      padding: 30px 24px 220px;
+    }
+    .p-cols {
+      grid-template-columns: 1fr;
+      gap: 34px;
+    }
+    .p-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

@@ -1,367 +1,308 @@
 ---
 export const prerender = false;
 import Base from '../layouts/Base.astro';
+import ProfilePage from '../components/ProfilePage.astro';
 import { getEpisodes } from '../lib/content';
 import { isAdmin } from '../lib/supabase-admin';
+import { CONNECTION_CATALOG, MAX_CONNECTIONS } from '../lib/connections';
+import {
+  buildActivity,
+  getConnections,
+  getProfileDetails,
+  getProfileRow,
+  getSiteNews,
+  getUserContent,
+  resolveMixTitles,
+  resolveTrack,
+  safeRows,
+} from '../lib/profile';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/login');
 const supabase = Astro.locals.supabase;
 
-// Defensive: tables may not exist yet (before the migration is run), and empty
-// results are normal. Either way we degrade to a clean empty state.
-async function safe(query: PromiseLike<{ data: unknown; error: unknown }>) {
-  try {
-    const { data, error } = await query;
-    return error ? null : data;
-  } catch {
-    return null;
+// Grid edits are plain POSTs back to this page; redirect after (PRG) so a
+// refresh never re-pins. RLS scopes every write to the signed-in user.
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const action = form.get('action');
+
+  if (action === 'add-connection') {
+    const entry = CONNECTION_CATALOG.find((c) => c.slug === form.get('slug'));
+    if (entry) {
+      const existing = await getConnections(supabase, user.id);
+      if (existing.length < MAX_CONNECTIONS && !existing.some((c) => c.name === entry.name)) {
+        await supabase.from('connections').insert({
+          user_id: user.id,
+          kind: entry.kind,
+          name: entry.name,
+          image_url: entry.image,
+          link_url: entry.url,
+          position: Math.max(0, ...existing.map((c) => c.position)) + 1,
+        });
+      }
+    }
+  } else if (action === 'remove-connection') {
+    const id = String(form.get('id') ?? '');
+    if (id) await supabase.from('connections').delete().eq('id', id).eq('user_id', user.id);
   }
+  return Astro.redirect('/dashboard');
 }
 
-const profile = (await safe(
-  supabase.from('profiles').select('display_name, created_at').eq('id', user.id).maybeSingle(),
-)) as { display_name?: string; created_at?: string } | null;
+const episodes = await getEpisodes();
+const epByRef = new Map(episodes.map((e) => [e.slug, e]));
 
-const favorites = ((await safe(
-  supabase.from('favorites').select('content_ref, created_at').order('created_at', { ascending: false }),
-)) ?? []) as Array<{ content_ref: string; created_at: string }>;
+const [profile, details, connections, content, favorites, listens, news] = await Promise.all([
+  getProfileRow(supabase, user.id),
+  getProfileDetails(supabase, user.id),
+  getConnections(supabase, user.id),
+  getUserContent(supabase, user.id, false),
+  safeRows<{ content_ref: string; created_at: string }>(
+    supabase
+      .from('favorites')
+      .select('content_ref, created_at')
+      .order('created_at', { ascending: false })
+      .limit(15),
+  ),
+  safeRows<{ content_ref: string; status: string; progress_seconds: number; updated_at: string }>(
+    supabase
+      .from('listen_status')
+      .select('content_ref, status, progress_seconds, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(15),
+  ),
+  getSiteNews(supabase, episodes),
+]);
 
-const listens = ((await safe(
-  supabase
-    .from('listen_status')
-    .select('content_ref, status, progress_seconds, updated_at')
-    .order('updated_at', { ascending: false }),
-)) ?? []) as Array<{ content_ref: string; status: string; progress_seconds: number; updated_at: string }>;
+const mixTitlesByRef = await resolveMixTitles(supabase, [
+  ...favorites.map((f) => f.content_ref),
+  ...listens.map((l) => l.content_ref),
+]);
 
-const uploads = ((await safe(
-  supabase.from('user_uploads').select('id, title, status, created_at').order('created_at', { ascending: false }),
-)) ?? []) as Array<{ id: string; title: string; status: string; created_at: string }>;
+const activity = buildActivity({
+  content,
+  episodesByRef: epByRef,
+  mixTitlesByRef,
+  favorites,
+  listens,
+  connections,
+});
 
-const posts = ((await safe(
-  supabase.from('posts').select('id, title, slug, status, created_at').order('created_at', { ascending: false }),
-)) ?? []) as Array<{ id: string; title: string; slug: string; status: string; created_at: string }>;
-
-const lists = ((await safe(
-  supabase.from('lists').select('id, title, status, created_at').order('created_at', { ascending: false }),
-)) ?? []) as Array<{ id: string; title: string; status: string; created_at: string }>;
-
-const albums = ((await safe(
-  supabase.from('photo_albums').select('id, title, status, created_at').order('created_at', { ascending: false }),
-)) ?? []) as Array<{ id: string; title: string; status: string; created_at: string }>;
+const song = details?.profile_song_ref
+  ? await resolveTrack(supabase, details.profile_song_ref, epByRef)
+  : null;
 
 const displayName = profile?.display_name || user.email?.split('@')[0] || 'Listener';
 const memberSince = profile?.created_at
   ? new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(new Date(profile.created_at))
   : null;
-const inProgress = listens.filter((l) => l.status === 'playing');
 
-// Resolve content_refs (episode slugs) to titles/links. Episodes are public,
-// CDN-cached Sanity reads — cheap even on this SSR route.
-const episodes = await getEpisodes();
-const epByRef = new Map(episodes.map((e) => [e.slug, e]));
+const inProgress = listens
+  .filter((l) => l.status === 'playing')
+  .map((l) => {
+    const ep = epByRef.get(l.content_ref);
+    return {
+      title: ep?.title ?? mixTitlesByRef.get(l.content_ref),
+      href: ep ? `/show/${ep.slug}` : `/mixes/${l.content_ref}`,
+      mins: Math.max(1, Math.floor(l.progress_seconds / 60)),
+    };
+  })
+  .filter((l) => l.title)
+  .slice(0, 4);
+
+const pinned = new Set(connections.map((c) => c.name));
+const catalog = CONNECTION_CATALOG.filter((c) => !pinned.has(c.name));
+
+const manage = [
+  { label: 'My mixtapes', rows: content.mixes, path: '/mixes', cta: 'Upload a mix', ctaHref: '/contribute/mix' },
+  { label: 'My posts', rows: content.posts, path: '/posts', cta: 'Write a post', ctaHref: '/contribute/post' },
+  { label: 'My lists', rows: content.lists, path: '/lists', cta: 'Make a list', ctaHref: '/contribute/list' },
+  { label: 'My concert photos', rows: content.albums, path: '/photos', cta: 'Share concert photos', ctaHref: '/contribute/photos' },
+];
 ---
 
 <Base title="Account" section="account">
-  <section class="dash">
-    <header class="dash-head">
-      <div>
-        <span class="eyebrow">Broadcasting from · local time</span>
-        <h1>{displayName}</h1>
-        <p class="dash-email mono">{user.email}{memberSince ? ` · since ${memberSince}` : ''}</p>
+  <ProfilePage
+    editable={true}
+    profileId={user.id}
+    displayName={displayName}
+    avatarUrl={profile?.avatar_url ?? null}
+    memberSince={memberSince}
+    email={user.email}
+    statusLine={details?.status_line}
+    bio={details?.bio}
+    isPublic={details?.is_public ?? false}
+    song={song}
+    connections={connections}
+    catalog={catalog}
+    gridFull={connections.length >= MAX_CONNECTIONS}
+    activity={activity}
+    news={news}
+    showAdminLink={isAdmin(user)}
+  >
+    <Fragment slot="side">
+      {
+        inProgress.length > 0 && (
+          <div class="p-box side-box">
+            <h2 class="p-box-h eyebrow">Continue listening</h2>
+            <ul class="cont">
+              {inProgress.map((l) => (
+                <li>
+                  <a href={l.href}>
+                    <span class="cont-t">{l.title}</span>
+                    <span class="cont-n mono">{l.mins} min in</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+    </Fragment>
+
+    <section slot="manage" class="manage">
+      <div class="section-label manage-label">
+        <span class="eyebrow">My pages</span>
+        <span class="line"></span>
       </div>
-      <div class="dash-head-acts">
-        {isAdmin(user) && <a class="dash-signout" href="/admin/moderation">Moderation</a>}
-        <form method="POST" action="/auth/signout" data-astro-reload>
-          <button class="dash-signout" type="submit">Sign out</button>
-        </form>
+      <div class="manage-grid">
+        {
+          manage.map((m) => (
+            <div class="manage-panel">
+              <h3 class="eyebrow">{m.label}</h3>
+              {m.rows.length === 0 ? (
+                <p class="manage-empty">Nothing yet.</p>
+              ) : (
+                <ul class="manage-rows">
+                  {m.rows.slice(0, 4).map((r) => (
+                    <li>
+                      <a href={`${m.path}/${r.id}`}>{r.title}</a>
+                      <span class="mono">{r.status}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <a class="manage-cta mono" href={m.ctaHref}>{m.cta}</a>
+            </div>
+          ))
+        }
       </div>
-    </header>
-
-    <div class="dash-grid">
-      <section class="panel">
-        <div class="section-label" style="padding:0;margin:0 0 18px">
-          <span class="eyebrow">Continue listening</span>
-          <span class="line"></span>
-          <span class="eyebrow">{inProgress.length}</span>
-        </div>
-        {
-          inProgress.length === 0 ? (
-            <p class="empty">Nothing in progress. Hit play on a broadcast and it'll wait for you here.</p>
-          ) : (
-            <ul class="rows">
-              {inProgress.map((l) => {
-                const ep = epByRef.get(l.content_ref);
-                const mins = Math.max(1, Math.floor(l.progress_seconds / 60));
-                return (
-                  <li class="row">
-                    {ep ? (
-                      <a class="row-t" href={`/show/${ep.slug}`}>
-                        {ep.title}
-                      </a>
-                    ) : (
-                      <span class="row-t">{l.content_ref}</span>
-                    )}
-                    <span class="row-n mono">{mins} min in</span>
-                  </li>
-                );
-              })}
-            </ul>
-          )
-        }
-      </section>
-
-      <section class="panel">
-        <div class="section-label" style="padding:0;margin:0 0 18px">
-          <span class="eyebrow">Favorites</span>
-          <span class="line"></span>
-          <span class="eyebrow">{favorites.length}</span>
-        </div>
-        {
-          favorites.length === 0 ? (
-            <p class="empty">No favorites yet. Tap the mark on any show to keep it close.</p>
-          ) : (
-            <ul class="rows">
-              {favorites.map((f) => {
-                const ep = epByRef.get(f.content_ref);
-                return (
-                  <li class="row">
-                    {ep ? (
-                      <a class="row-t" href={`/show/${ep.slug}`}>
-                        {ep.title}
-                      </a>
-                    ) : (
-                      <span class="row-t">{f.content_ref}</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )
-        }
-      </section>
-
-      <section class="panel">
-        <div class="section-label" style="padding:0;margin:0 0 18px">
-          <span class="eyebrow">My mixtapes</span>
-          <span class="line"></span>
-          <span class="eyebrow">{uploads.length}</span>
-        </div>
-        {
-          uploads.length === 0 ? (
-            <p class="empty">No uploads yet. Share a tape and it'll live here.</p>
-          ) : (
-            <ul class="rows">
-              {uploads.map((u) => (
-                <li class="row">
-                  <a class="row-t" href={`/mixes/${u.id}`}>
-                    {u.title}
-                  </a>
-                  <span class="row-n mono">{u.status}</span>
-                </li>
-              ))}
-            </ul>
-          )
-        }
-        <a class="dash-cta" href="/contribute/mix">Upload a mix</a>
-      </section>
-
-      <section class="panel">
-        <div class="section-label" style="padding:0;margin:0 0 18px">
-          <span class="eyebrow">My posts</span>
-          <span class="line"></span>
-          <span class="eyebrow">{posts.length}</span>
-        </div>
-        {
-          posts.length === 0 ? (
-            <p class="empty">No posts yet. Reviews, show reports, record pieces.</p>
-          ) : (
-            <ul class="rows">
-              {posts.map((p) => (
-                <li class="row">
-                  <a class="row-t" href={`/posts/${p.id}`}>
-                    {p.title}
-                  </a>
-                  <span class="row-n mono">{p.status}</span>
-                </li>
-              ))}
-            </ul>
-          )
-        }
-        <a class="dash-cta" href="/contribute/post">Write a post</a>
-      </section>
-
-      <section class="panel">
-        <div class="section-label" style="padding:0;margin:0 0 18px">
-          <span class="eyebrow">My lists</span>
-          <span class="line"></span>
-          <span class="eyebrow">{lists.length}</span>
-        </div>
-        {
-          lists.length === 0 ? (
-            <p class="empty">No lists yet. Favorite records, artists, labels, shows.</p>
-          ) : (
-            <ul class="rows">
-              {lists.map((l) => (
-                <li class="row">
-                  <a class="row-t" href={`/lists/${l.id}`}>
-                    {l.title}
-                  </a>
-                  <span class="row-n mono">{l.status}</span>
-                </li>
-              ))}
-            </ul>
-          )
-        }
-        <a class="dash-cta" href="/contribute/list">Make a list</a>
-      </section>
-
-      <section class="panel">
-        <div class="section-label" style="padding:0;margin:0 0 18px">
-          <span class="eyebrow">My concert photos</span>
-          <span class="line"></span>
-          <span class="eyebrow">{albums.length}</span>
-        </div>
-        {
-          albums.length === 0 ? (
-            <p class="empty">No albums yet. Pictures from shows you've been to.</p>
-          ) : (
-            <ul class="rows">
-              {albums.map((a) => (
-                <li class="row">
-                  <a class="row-t" href={`/photos/${a.id}`}>
-                    {a.title}
-                  </a>
-                  <span class="row-n mono">{a.status}</span>
-                </li>
-              ))}
-            </ul>
-          )
-        }
-        <a class="dash-cta" href="/contribute/photos">Share concert photos</a>
-      </section>
-    </div>
-  </section>
+    </section>
+  </ProfilePage>
 </Base>
 
 <style>
-  .dash {
-    max-width: 1040px;
-    margin: 0 auto;
-    padding: 50px 48px 220px;
-  }
-  .dash-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 24px;
-    padding-bottom: 30px;
-    border-bottom: 1px solid var(--hairline);
-    margin-bottom: 40px;
-  }
-  .dash-head h1 {
-    font-family: 'Cormorant Garamond', serif;
-    font-weight: 300;
-    text-transform: uppercase;
-    letter-spacing: 0.22em;
-    font-size: clamp(28px, 4vw, 44px);
-    color: var(--ink);
-    margin: 14px 0 10px;
-  }
-  .dash-email {
-    font-size: 11px;
-    letter-spacing: 0.16em;
-    color: var(--ink-3);
-  }
-  .dash-head-acts {
-    flex: none;
-    display: flex;
-    gap: 10px;
-  }
-  .dash-signout {
-    flex: none;
-    text-decoration: none;
-    background: none;
+  /* Slotted content is styled here (page scope), not in ProfilePage. The
+     .p-box/.p-box-h shells come from ProfilePage's scope, so the side box
+     restates them — keep the two in sync. */
+  .side-box {
     border: 1px solid var(--hairline);
-    color: var(--ink-2);
-    font-family: 'IBM Plex Mono', monospace;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-    font-size: 10px;
-    padding: 11px 18px;
-    border-radius: 999px;
-    cursor: pointer;
-    transition: all var(--dur-fast) var(--ease-out);
+    background: var(--surface-1);
   }
-  .dash-signout:hover {
-    border-color: var(--ember);
-    color: var(--ember);
+  .side-box .p-box-h {
+    display: block;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--hairline);
+    font-weight: 400;
   }
-  .dash-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 30px 44px;
-  }
-  .panel {
-    display: flex;
-    flex-direction: column;
-  }
-  .empty {
-    color: var(--ink-3);
-    font-style: italic;
-    font-size: 15px;
-    line-height: 1.6;
-  }
-  .rows {
+  .cont {
     list-style: none;
-    display: flex;
-    flex-direction: column;
   }
-  .row {
+  .cont a {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 16px;
-    padding: 11px 0;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--hairline-soft);
+    text-decoration: none;
+  }
+  .cont li:last-child a {
+    border-bottom: none;
+  }
+  .cont-t {
+    font-size: 13px;
+    color: var(--ink);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .cont a:hover .cont-t {
+    color: var(--ember);
+  }
+  .cont-n {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  .manage-label {
+    padding: 0;
+    margin: 0 0 16px;
+  }
+  .manage-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 26px 36px;
+  }
+  .manage-panel {
+    display: flex;
+    flex-direction: column;
+  }
+  .manage-panel h3 {
+    font-weight: 400;
+    margin-bottom: 10px;
+  }
+  .manage-empty {
+    color: var(--ink-3);
+    font-style: italic;
+    font-size: 14px;
+  }
+  .manage-rows {
+    list-style: none;
+  }
+  .manage-rows li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 8px 0;
     border-bottom: 1px solid var(--hairline-soft);
   }
-  .row-t {
+  .manage-rows a {
+    font-size: 14px;
     color: var(--ink);
-    font-size: 15px;
-  }
-  a.row-t {
     text-decoration: none;
     transition: color var(--dur-fast) var(--ease-out);
   }
-  a.row-t:hover {
+  .manage-rows a:hover {
     color: var(--ember);
   }
-  .row-n {
-    font-size: 10px;
+  .manage-rows .mono {
+    font-size: 9px;
     letter-spacing: 0.12em;
     color: var(--ink-3);
   }
-  .dash-cta {
+  .manage-cta {
     align-self: flex-start;
-    margin-top: 18px;
-    background: none;
+    margin-top: 12px;
     border: 1px solid var(--hairline);
-    color: var(--ink-2);
-    font-family: 'IBM Plex Mono', monospace;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    font-size: 10px;
-    padding: 10px 16px;
     border-radius: 6px;
+    padding: 9px 14px;
+    color: var(--ink-2);
     text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 9px;
     transition: all var(--dur-fast) var(--ease-out);
   }
-  .dash-cta:hover {
+  .manage-cta:hover {
     border-color: var(--ember);
     color: var(--ember);
   }
-  @media (max-width: 760px) {
-    .dash-grid {
+
+  @media (max-width: 700px) {
+    .manage-grid {
       grid-template-columns: 1fr;
     }
   }
