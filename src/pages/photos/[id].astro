@@ -3,7 +3,7 @@ export const prerender = false;
 import Base from '../../layouts/Base.astro';
 import ReportForm from '../../components/ReportForm.astro';
 import { handleReport } from '../../lib/report';
-import { cdnUrl, displayNames, ugcDate } from '../../lib/ugc';
+import { cdnUrl, displayNames, publicProfileIds, ugcDate } from '../../lib/ugc';
 
 const id = Astro.params.id!;
 const supabase = Astro.locals.supabase;
@@ -24,6 +24,9 @@ if (!album) return Astro.redirect('/community');
 
 const names = await displayNames(supabase, [album.user_id]);
 const author = names.get(album.user_id) ?? 'a listener';
+const authorHref = (await publicProfileIds(supabase, [album.user_id])).has(album.user_id)
+  ? `/u/${album.user_id}`
+  : null;
 const own = user?.id === album.user_id;
 const photos = [...(album.photos ?? [])].sort((a, b) => a.position - b.position);
 const stamp = [album.venue, album.event_date ? ugcDate(album.event_date) : null]
@@ -39,7 +42,7 @@ const stamp = [album.venue, album.event_date ? ugcDate(album.event_date) : null]
         {album.status !== 'published' && <span class="badge">{album.status} — only you can see this</span>}
       </span>
       <h1>{album.title}</h1>
-      <p class="byline">by {author}</p>
+      <p class="byline">by {authorHref ? <a href={authorHref}>{author}</a> : author}</p>
       {album.description && <p class="desc">{album.description}</p>}
     </header>
 
@@ -86,6 +89,11 @@ const stamp = [album.venue, album.event_date ? ugcDate(album.event_date) : null]
     letter-spacing: 0.28em;
     font-size: 11px;
     color: var(--ember);
+  }
+  .byline a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 4px;
   }
   .desc {
     margin-top: 22px;

@@ -174,6 +174,8 @@ export function buildActivity(opts: {
   favorites?: Array<{ content_ref: string; created_at: string }>;
   listens?: Array<{ content_ref: string; status: string; updated_at: string }>;
   connections?: Connection[];
+  /** Notes received on the comment wall (WallEntry is structurally compatible). */
+  wallNotes?: Array<{ author_name: string; created_at: string }>;
   limit?: number;
 }): ActivityEvent[] {
   const { content, episodesByRef, mixTitlesByRef } = opts;
@@ -209,6 +211,8 @@ export function buildActivity(opts: {
   }
   for (const c of opts.connections ?? [])
     events.push({ kind: 'grid', text: `Pinned ${c.name} to the grid`, href: c.link_url, at: c.created_at });
+  for (const w of opts.wallNotes ?? [])
+    events.push({ kind: 'wall', text: `Got a wall note from ${w.author_name}`, href: '#wall', at: w.created_at });
 
   events.sort((a, b) => b.at.localeCompare(a.at));
   return events.slice(0, opts.limit ?? 12);

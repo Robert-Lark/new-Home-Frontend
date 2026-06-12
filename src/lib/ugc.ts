@@ -110,6 +110,31 @@ export async function displayNames(
   return names;
 }
 
+/**
+ * Which of these users have a public profile (one batched query) — used to
+ * decide whether a "by <name>" byline links to /u/<id> or stays plain text.
+ * RLS on profile_details lets anonymous readers see is_public rows, and the
+ * empty-set fallback keeps bylines plain until the 0003 migration runs.
+ */
+export async function publicProfileIds(
+  supabase: SupabaseClient,
+  userIds: string[],
+): Promise<Set<string>> {
+  const ids = [...new Set(userIds)];
+  if (ids.length === 0) return new Set();
+  try {
+    const { data, error } = await supabase
+      .from('profile_details')
+      .select('id')
+      .in('id', ids)
+      .eq('is_public', true);
+    if (error || !data) return new Set();
+    return new Set(data.map((r) => r.id));
+  } catch {
+    return new Set();
+  }
+}
+
 /** "1:24:06" / "54:02" — duration label from stored seconds. */
 export function durationLabel(seconds: number | null | undefined): string | undefined {
   if (!seconds || !Number.isFinite(seconds) || seconds <= 0) return undefined;

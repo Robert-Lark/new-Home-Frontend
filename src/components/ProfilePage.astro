@@ -2,6 +2,7 @@
 import type { Track } from '../islands/PlayerDock';
 import type { CatalogEntry } from '../lib/connections';
 import type { ActivityEvent, Connection, NewsItem } from '../lib/profile';
+import type { WallActionResult, WallEntry } from '../lib/wall';
 import { ugcDate } from '../lib/ugc';
 
 /**
@@ -30,6 +31,14 @@ interface Props {
   gridFull?: boolean;
   activity: ActivityEvent[];
   news: NewsItem[];
+  /** Comment wall, newest first. */
+  wall: WallEntry[];
+  /** Only public profiles accept notes (the insert RLS enforces it too). */
+  wallOpen: boolean;
+  /** Signed-in viewer id — drives the per-note delete/report affordances. */
+  viewerId?: string | null;
+  /** Failed wall action to render inline (successes redirect, PRG). */
+  wallResult?: WallActionResult | null;
   showAdminLink?: boolean;
   /** Notice strip for owners previewing their public page. */
   previewBanner?: string;
@@ -51,11 +60,17 @@ const {
   gridFull = false,
   activity,
   news,
+  wall,
+  wallOpen,
+  viewerId = null,
+  wallResult = null,
   showAdminLink = false,
   previewBanner,
 } = Astro.props;
 
 const initial = (displayName.trim()[0] ?? 'Q').toUpperCase();
+/** Owner moderates their whole wall; authors take back their own notes. */
+const canRemove = (note: WallEntry) => viewerId === profileId || viewerId === note.author_id;
 ---
 
 <section class="profile">
@@ -262,6 +277,92 @@ const initial = (displayName.trim()[0] ?? 'Q').toUpperCase();
           )
         }
         {editable && gridFull && <p class="p-hint mono">Grid full — unpin something to make room.</p>}
+      </section>
+
+      <section id="wall">
+        <div class="section-label p-label">
+          <span class="eyebrow">{displayName}’s wall</span>
+          <span class="line"></span>
+          <span class="eyebrow">{wall.length}</span>
+        </div>
+
+        {wallResult && !wallResult.ok && <p class="p-wall-msg mono">{wallResult.message}</p>}
+
+        {
+          wallOpen &&
+            (viewerId ? (
+              <form class="p-wall-form" method="POST" data-astro-reload>
+                <input type="hidden" name="action" value="wall-post" />
+                <textarea
+                  class="ugc-textarea"
+                  name="body"
+                  rows="3"
+                  required
+                  maxlength="1000"
+                  placeholder={`Write something for ${displayName}…`}></textarea>
+                <button class="ugc-submit ghost" type="submit">Leave a note</button>
+              </form>
+            ) : (
+              <p class="p-empty">
+                <a href="/login">Sign in</a> to write on the wall.
+              </p>
+            ))
+        }
+        {
+          editable && !wallOpen && (
+            <p class="p-hint mono">
+              Your wall opens for notes once your profile is public — flip it in <a href="/settings">Settings</a>.
+            </p>
+          )
+        }
+
+        {
+          wall.length === 0 ? (
+            <p class="p-empty">No notes yet{wallOpen && viewerId ? ' — leave the first one.' : '.'}</p>
+          ) : (
+            <ul class="p-wall">
+              {wall.map((note) => (
+                <li>
+                  <div class="p-wall-head">
+                    {note.author_href ? (
+                      <a class="p-wall-a" href={note.author_href}>{note.author_name}</a>
+                    ) : (
+                      <span class="p-wall-a">{note.author_name}</span>
+                    )}
+                    <span class="p-wall-d mono">{ugcDate(note.created_at)}</span>
+                    {canRemove(note) && (
+                      <form method="POST" data-astro-reload>
+                        <input type="hidden" name="action" value="wall-delete" />
+                        <input type="hidden" name="id" value={note.id} />
+                        <button class="p-wall-x mono" type="submit" aria-label={`Remove ${note.author_name}'s note`}>
+                          ×
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                  <p class="p-wall-b">{note.body}</p>
+                  {viewerId && !canRemove(note) && (
+                    <details class="p-wall-report">
+                      <summary class="mono">Report this</summary>
+                      <form method="POST" data-astro-reload>
+                        <input type="hidden" name="action" value="wall-report" />
+                        <input type="hidden" name="id" value={note.id} />
+                        <textarea
+                          class="ugc-textarea"
+                          name="reason"
+                          rows="2"
+                          required
+                          maxlength="1000"
+                          placeholder="What's wrong with it?"></textarea>
+                        <button class="ugc-submit ghost" type="submit">Send report</button>
+                      </form>
+                    </details>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )
+        }
       </section>
 
       <slot name="manage" />
@@ -729,6 +830,116 @@ const initial = (displayName.trim()[0] ?? 'Q').toUpperCase();
   }
   .p-add-row:hover .p-add-plus {
     color: var(--ember);
+  }
+
+  /* comment wall */
+  .p-wall-msg {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ember-deep);
+    margin-bottom: 14px;
+  }
+  .p-wall-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+    max-width: 560px;
+    margin-bottom: 28px;
+  }
+  .p-wall {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+  }
+  .p-wall li {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--hairline-soft);
+  }
+  .p-wall-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .p-wall-a {
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  a.p-wall-a {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: var(--hairline);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  a.p-wall-a:hover {
+    color: var(--ember);
+  }
+  .p-wall-d {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+  .p-wall-head form {
+    margin-left: auto;
+  }
+  .p-wall-x {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: none;
+    color: var(--ink-2);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .p-wall-x:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+  .p-wall-b {
+    margin-top: 8px;
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--ink-2);
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    max-width: 64ch;
+  }
+  .p-wall-report {
+    margin-top: 10px;
+  }
+  .p-wall-report summary {
+    display: inline-block;
+    list-style: none;
+    cursor: pointer;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .p-wall-report summary::-webkit-details-marker {
+    display: none;
+  }
+  .p-wall-report summary:hover {
+    color: var(--ember);
+  }
+  .p-wall-report form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+    max-width: 480px;
+    margin-top: 12px;
+  }
+  .p-hint a {
+    color: var(--ink-2);
   }
 
   @media (max-width: 920px) {

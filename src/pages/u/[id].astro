@@ -12,6 +12,12 @@ import {
   getUserContent,
   resolveTrack,
 } from '../../lib/profile';
+import {
+  getWallComments,
+  handleWallAction,
+  resolveWallEntries,
+  type WallActionResult,
+} from '../../lib/wall';
 
 /**
  * Public profile view — what anyone (signed in or not) sees of a listener who
@@ -25,6 +31,15 @@ const supabase = Astro.locals.supabase;
 const viewer = Astro.locals.user;
 const own = viewer?.id === id;
 
+// Wall posts/deletes/reports are the page's only forms. Successes redirect
+// (PRG, like the dashboard grid); failures render inline (like report.ts).
+let wallResult: WallActionResult | null = null;
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  wallResult = await handleWallAction(form, viewer, supabase, id);
+  if (wallResult?.ok) return Astro.redirect(`/u/${id}#wall`);
+}
+
 const profile = await getProfileRow(supabase, id);
 const details = profile ? await getProfileDetails(supabase, id) : null;
 const visible = Boolean(profile && (details?.is_public || own));
@@ -34,15 +49,17 @@ if (!visible) Astro.response.status = 404;
 const episodes = visible ? await getEpisodes() : [];
 const epByRef = new Map(episodes.map((e) => [e.slug, e]));
 
-const [connections, content, news] = visible
+const [connections, content, news, wallComments] = visible
   ? await Promise.all([
       getConnections(supabase, id),
       getUserContent(supabase, id, true),
       getSiteNews(supabase, episodes),
+      getWallComments(supabase, id),
     ])
-  : [[], { mixes: [], posts: [], lists: [], albums: [] }, []];
+  : [[], { mixes: [], posts: [], lists: [], albums: [] }, [], []];
 
-const activity = buildActivity({ content, episodesByRef: epByRef, connections });
+const wall = await resolveWallEntries(supabase, wallComments);
+const activity = buildActivity({ content, episodesByRef: epByRef, connections, wallNotes: wall });
 
 const song = details?.profile_song_ref
   ? await resolveTrack(supabase, details.profile_song_ref, epByRef)
@@ -74,6 +91,10 @@ const memberSince = profile?.created_at
         connections={connections}
         activity={activity}
         news={news}
+        wall={wall}
+        wallOpen={details?.is_public ?? false}
+        viewerId={viewer?.id ?? null}
+        wallResult={wallResult}
         previewBanner={
           own
             ? details?.is_public

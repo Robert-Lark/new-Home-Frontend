@@ -3,7 +3,7 @@ export const prerender = false;
 import Base from '../../layouts/Base.astro';
 import ReportForm from '../../components/ReportForm.astro';
 import { handleReport } from '../../lib/report';
-import { cdnUrl, displayNames, ugcDate, durationLabel } from '../../lib/ugc';
+import { cdnUrl, displayNames, publicProfileIds, ugcDate, durationLabel } from '../../lib/ugc';
 
 const id = Astro.params.id!;
 const supabase = Astro.locals.supabase;
@@ -25,6 +25,9 @@ if (!mix) return Astro.redirect('/community');
 
 const names = await displayNames(supabase, [mix.user_id]);
 const author = names.get(mix.user_id) ?? 'a listener';
+const authorHref = (await publicProfileIds(supabase, [mix.user_id])).has(mix.user_id)
+  ? `/u/${mix.user_id}`
+  : null;
 const own = user?.id === mix.user_id;
 const cover = mix.cover_r2_key ? cdnUrl(mix.cover_r2_key) : '/images/cryo_01.jpg';
 const tracklist: string[] = Array.isArray(mix.tracklist)
@@ -44,7 +47,7 @@ const tracklist: string[] = Array.isArray(mix.tracklist)
         {mix.status !== 'published' && <span class="badge">{mix.status} — only you can see this</span>}
       </span>
       <h1>{mix.title}</h1>
-      <p class="by">{author}</p>
+      <p class="by">{authorHref ? <a href={authorHref}>{author}</a> : author}</p>
 
       <div class="show-actions">
         <button
@@ -133,6 +136,11 @@ const tracklist: string[] = Array.isArray(mix.tracklist)
     letter-spacing: 0.28em;
     font-size: 11px;
     color: var(--ember);
+  }
+  .by a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 4px;
   }
   .show-actions {
     display: flex;

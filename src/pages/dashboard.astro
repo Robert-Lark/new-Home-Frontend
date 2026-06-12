@@ -16,18 +16,30 @@ import {
   resolveTrack,
   safeRows,
 } from '../lib/profile';
+import {
+  getWallComments,
+  handleWallAction,
+  resolveWallEntries,
+  type WallActionResult,
+} from '../lib/wall';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/login');
 const supabase = Astro.locals.supabase;
 
-// Grid edits are plain POSTs back to this page; redirect after (PRG) so a
-// refresh never re-pins. RLS scopes every write to the signed-in user.
+// Grid edits and wall actions are plain POSTs back to this page; redirect
+// after success (PRG) so a refresh never re-pins or re-posts. RLS scopes
+// every write to the signed-in user. Failed wall actions render inline.
+let wallResult: WallActionResult | null = null;
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
   const action = form.get('action');
 
-  if (action === 'add-connection') {
+  const wall = await handleWallAction(form, user, supabase, user.id);
+  if (wall) {
+    if (wall.ok) return Astro.redirect('/dashboard#wall');
+    wallResult = wall;
+  } else if (action === 'add-connection') {
     const entry = CONNECTION_CATALOG.find((c) => c.slug === form.get('slug'));
     if (entry) {
       const existing = await getConnections(supabase, user.id);
@@ -46,17 +58,18 @@ if (Astro.request.method === 'POST') {
     const id = String(form.get('id') ?? '');
     if (id) await supabase.from('connections').delete().eq('id', id).eq('user_id', user.id);
   }
-  return Astro.redirect('/dashboard');
+  if (!wallResult) return Astro.redirect('/dashboard');
 }
 
 const episodes = await getEpisodes();
 const epByRef = new Map(episodes.map((e) => [e.slug, e]));
 
-const [profile, details, connections, content, favorites, listens, news] = await Promise.all([
+const [profile, details, connections, content, wallComments, favorites, listens, news] = await Promise.all([
   getProfileRow(supabase, user.id),
   getProfileDetails(supabase, user.id),
   getConnections(supabase, user.id),
   getUserContent(supabase, user.id, false),
+  getWallComments(supabase, user.id),
   safeRows<{ content_ref: string; created_at: string }>(
     supabase
       .from('favorites')
@@ -74,9 +87,12 @@ const [profile, details, connections, content, favorites, listens, news] = await
   getSiteNews(supabase, episodes),
 ]);
 
-const mixTitlesByRef = await resolveMixTitles(supabase, [
-  ...favorites.map((f) => f.content_ref),
-  ...listens.map((l) => l.content_ref),
+const [mixTitlesByRef, wall] = await Promise.all([
+  resolveMixTitles(supabase, [
+    ...favorites.map((f) => f.content_ref),
+    ...listens.map((l) => l.content_ref),
+  ]),
+  resolveWallEntries(supabase, wallComments),
 ]);
 
 const activity = buildActivity({
@@ -86,6 +102,7 @@ const activity = buildActivity({
   favorites,
   listens,
   connections,
+  wallNotes: wall,
 });
 
 const song = details?.profile_song_ref
@@ -138,6 +155,10 @@ const manage = [
     gridFull={connections.length >= MAX_CONNECTIONS}
     activity={activity}
     news={news}
+    wall={wall}
+    wallOpen={details?.is_public ?? false}
+    viewerId={user.id}
+    wallResult={wallResult}
     showAdminLink={isAdmin(user)}
   >
     <Fragment slot="side">

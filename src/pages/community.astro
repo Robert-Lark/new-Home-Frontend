@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Base from '../layouts/Base.astro';
-import { cdnUrl, displayNames, ugcDate, durationLabel } from '../lib/ugc';
+import { cdnUrl, displayNames, publicProfileIds, ugcDate, durationLabel } from '../lib/ugc';
 
 /**
  * The community shelf: everything listeners have contributed that the curator
@@ -80,11 +80,15 @@ const albums = await safe<{
     .limit(12),
 );
 
-const names = await displayNames(supabase, [
+const uids = [
   ...mixes.map((m) => m.user_id),
   ...posts.map((p) => p.user_id),
   ...lists.map((l) => l.user_id),
   ...albums.map((a) => a.user_id),
+];
+const [names, publicIds] = await Promise.all([
+  displayNames(supabase, uids),
+  publicProfileIds(supabase, uids),
 ]);
 const by = (uid: string) => names.get(uid) ?? 'a listener';
 
@@ -129,18 +133,24 @@ const empty = mixes.length + posts.length + lists.length + albums.length === 0;
           </div>
           <div class="mix-grid">
             {mixes.map((m) => (
-              <a class="mix" href={`/mixes/${m.id}`}>
-                <img
-                  src={m.cover_r2_key ? cdnUrl(m.cover_r2_key) : FALLBACK_COVER}
-                  alt=""
-                  loading="lazy"
-                />
-                <span class="mix-t">{m.title}</span>
+              <div class="mix">
+                <a class="card-link" href={`/mixes/${m.id}`}>
+                  <img
+                    src={m.cover_r2_key ? cdnUrl(m.cover_r2_key) : FALLBACK_COVER}
+                    alt=""
+                    loading="lazy"
+                  />
+                  <span class="mix-t">{m.title}</span>
+                </a>
                 <span class="mix-b mono">
-                  {by(m.user_id)}
+                  {publicIds.has(m.user_id) ? (
+                    <a class="by-link" href={`/u/${m.user_id}`}>{by(m.user_id)}</a>
+                  ) : (
+                    by(m.user_id)
+                  )}
                   {durationLabel(m.duration) ? ` · ${durationLabel(m.duration)}` : ''}
                 </span>
-              </a>
+              </div>
             ))}
           </div>
         </>
@@ -162,7 +172,12 @@ const empty = mixes.length + posts.length + lists.length + albums.length === 0;
                   {p.title}
                 </a>
                 <span class="row-n mono">
-                  {by(p.user_id)} · {ugcDate(p.created_at)}
+                  {publicIds.has(p.user_id) ? (
+                    <a class="by-link" href={`/u/${p.user_id}`}>{by(p.user_id)}</a>
+                  ) : (
+                    by(p.user_id)
+                  )}{' '}
+                  · {ugcDate(p.created_at)}
                 </span>
               </li>
             ))}
@@ -185,7 +200,13 @@ const empty = mixes.length + posts.length + lists.length + albums.length === 0;
                 <a class="row-t" href={`/lists/${l.id}`}>
                   {l.title}
                 </a>
-                <span class="row-n mono">{by(l.user_id)}</span>
+                <span class="row-n mono">
+                  {publicIds.has(l.user_id) ? (
+                    <a class="by-link" href={`/u/${l.user_id}`}>{by(l.user_id)}</a>
+                  ) : (
+                    by(l.user_id)
+                  )}
+                </span>
               </li>
             ))}
           </ul>
@@ -203,14 +224,22 @@ const empty = mixes.length + posts.length + lists.length + albums.length === 0;
           </div>
           <div class="album-grid">
             {albums.map((a) => (
-              <a class="album" href={`/photos/${a.id}`}>
-                <img src={albumThumb(a)} alt="" loading="lazy" />
-                <span class="mix-t">{a.title}</span>
+              <div class="album">
+                <a class="card-link" href={`/photos/${a.id}`}>
+                  <img src={albumThumb(a)} alt="" loading="lazy" />
+                  <span class="mix-t">{a.title}</span>
+                </a>
                 <span class="mix-b mono">
                   {a.venue ? `${a.venue} · ` : ''}
-                  {a.event_date ? ugcDate(a.event_date) : by(a.user_id)}
+                  {a.event_date ? (
+                    ugcDate(a.event_date)
+                  ) : publicIds.has(a.user_id) ? (
+                    <a class="by-link" href={`/u/${a.user_id}`}>{by(a.user_id)}</a>
+                  ) : (
+                    by(a.user_id)
+                  )}
                 </span>
-              </a>
+              </div>
             ))}
           </div>
         </>
@@ -286,8 +315,13 @@ const empty = mixes.length + posts.length + lists.length + albums.length === 0;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    text-decoration: none;
     padding-bottom: 14px;
+  }
+  .card-link {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-decoration: none;
   }
   .mix img,
   .album img {
@@ -298,9 +332,18 @@ const empty = mixes.length + posts.length + lists.length + albums.length === 0;
     filter: grayscale(0.35) contrast(1.05);
     transition: filter var(--dur-fast) var(--ease-out);
   }
-  .mix:hover img,
-  .album:hover img {
+  .card-link:hover img {
     filter: none;
+  }
+  .by-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--hairline);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .by-link:hover {
+    color: var(--ember);
   }
   .mix-t {
     margin-top: 6px;
