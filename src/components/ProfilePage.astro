@@ -1,6 +1,6 @@
 ---
 import type { Track } from '../islands/PlayerDock';
-import type { CatalogEntry } from '../lib/connections';
+import { CONNECTION_KINDS, type CatalogEntry } from '../lib/connections';
 import type { ActivityEvent, Connection, NewsItem } from '../lib/profile';
 import type { WallActionResult, WallEntry } from '../lib/wall';
 import { ugcDate } from '../lib/ugc';
@@ -11,7 +11,8 @@ import { ugcDate } from '../lib/ugc';
  * (account, site news, slot "side"), and the main column with the bio blurb,
  * latest-activity list, and the connections grid. Used by /dashboard
  * (editable) and /u/[id] (read-only). Grid edits are plain POST forms handled
- * by the dashboard page — no JS beyond the existing player island.
+ * by the hosting page (dashboard: catalog/free-form adds + removes; /u/[id]:
+ * listener pins) — no JS beyond the existing player island.
  */
 interface Props {
   editable: boolean;
@@ -29,6 +30,12 @@ interface Props {
   /** Catalog entries still addable (editable views only). */
   catalog?: CatalogEntry[];
   gridFull?: boolean;
+  /** Failed free-form grid add to render inline (successes redirect, PRG). */
+  gridResult?: { ok: boolean; message: string } | null;
+  /** Listener-pin control for signed-in visitors (/u/[id] only). */
+  pinState?: 'available' | 'pinned' | null;
+  /** Failed pin attempt to render inline (successes redirect, PRG). */
+  pinResult?: { ok: boolean; message: string } | null;
   activity: ActivityEvent[];
   news: NewsItem[];
   /** Comment wall, newest first. */
@@ -58,6 +65,9 @@ const {
   connections,
   catalog = [],
   gridFull = false,
+  gridResult = null,
+  pinState = null,
+  pinResult = null,
   activity,
   news,
   wall,
@@ -71,6 +81,10 @@ const {
 const initial = (displayName.trim()[0] ?? 'Q').toUpperCase();
 /** Owner moderates their whole wall; authors take back their own notes. */
 const canRemove = (note: WallEntry) => viewerId === profileId || viewerId === note.author_id;
+/** Free-form entries can be anything except another listener — pins own that kind. */
+const freeKinds = CONNECTION_KINDS.filter((k) => k !== 'listener');
+/** Off-site tile links open in a new tab; in-app links (listener pins) stay put. */
+const offsite = (url: string | null) => Boolean(url && !url.startsWith('/'));
 ---
 
 <section class="profile">
@@ -122,6 +136,21 @@ const canRemove = (note: WallEntry) => viewerId === profileId || viewerId === no
               </div>
             )
           }
+          {
+            pinState && (
+              <div class="p-card-acts">
+                {pinState === 'available' ? (
+                  <form method="POST">
+                    <input type="hidden" name="action" value="pin-listener" />
+                    <button class="p-pin" type="submit">Pin to my grid</button>
+                  </form>
+                ) : (
+                  <span class="p-pin p-pin-done">On your grid</span>
+                )}
+              </div>
+            )
+          }
+          {pinResult && !pinResult.ok && <p class="p-card-msg mono">{pinResult.message}</p>}
         </div>
       </div>
 
@@ -230,8 +259,8 @@ const canRemove = (note: WallEntry) => viewerId === profileId || viewerId === no
                   <a
                     class="p-tile-link"
                     href={c.link_url ?? undefined}
-                    target={c.link_url ? '_blank' : undefined}
-                    rel={c.link_url ? 'noopener' : undefined}
+                    target={offsite(c.link_url) ? '_blank' : undefined}
+                    rel={offsite(c.link_url) ? 'nofollow noopener ugc' : undefined}
                   >
                     {c.image_url ? (
                       <img src={c.image_url} alt="" loading="lazy" />
@@ -253,27 +282,62 @@ const canRemove = (note: WallEntry) => viewerId === profileId || viewerId === no
             </ul>
           )
         }
+        {gridResult && !gridResult.ok && <p class="p-grid-msg mono">{gridResult.message}</p>}
         {
-          editable && !gridFull && catalog.length > 0 && (
-            <details class="p-add">
-              <summary class="mono">Pin to the grid</summary>
-              <ul class="p-add-panel">
-                {catalog.map((entry) => (
-                  <li>
-                    <form method="POST">
-                      <input type="hidden" name="action" value="add-connection" />
-                      <input type="hidden" name="slug" value={entry.slug} />
-                      <button class="p-add-row" type="submit">
-                        <img src={entry.image} alt="" loading="lazy" />
-                        <span class="p-add-n">{entry.name}</span>
-                        <span class="p-chip mono">{entry.kind}</span>
-                        <span class="p-add-plus mono" aria-hidden="true">+</span>
-                      </button>
-                    </form>
-                  </li>
-                ))}
-              </ul>
-            </details>
+          editable && !gridFull && (
+            <div class="p-adds">
+              {catalog.length > 0 && (
+                <details class="p-add">
+                  <summary class="mono">Pin to the grid</summary>
+                  <ul class="p-add-panel">
+                    {catalog.map((entry) => (
+                      <li>
+                        <form method="POST">
+                          <input type="hidden" name="action" value="add-connection" />
+                          <input type="hidden" name="slug" value={entry.slug} />
+                          <button class="p-add-row" type="submit">
+                            <img src={entry.image} alt="" loading="lazy" />
+                            <span class="p-add-n">{entry.name}</span>
+                            <span class="p-chip mono">{entry.kind}</span>
+                            <span class="p-add-plus mono" aria-hidden="true">+</span>
+                          </button>
+                        </form>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              <details class="p-add" open={Boolean(gridResult)}>
+                <summary class="mono">Add your own</summary>
+                <form class="p-free ugc-form" method="POST">
+                  <input type="hidden" name="action" value="add-free-connection" />
+                  <div>
+                    <label class="ugc-label" for="free-name">Name</label>
+                    <input class="ugc-input" id="free-name" type="text" name="name" required maxlength="80" />
+                  </div>
+                  <div>
+                    <label class="ugc-label" for="free-kind">Kind</label>
+                    <select class="ugc-select" id="free-kind" name="kind">
+                      {freeKinds.map((k) => <option value={k}>{k}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label class="ugc-label" for="free-link">Link — optional</label>
+                    <input
+                      class="ugc-input"
+                      id="free-link"
+                      type="url"
+                      name="link"
+                      maxlength="500"
+                      pattern="https?://.*"
+                      placeholder="https://…"
+                      title="Must start with http:// or https://"
+                    />
+                  </div>
+                  <button class="ugc-submit ghost" type="submit">Pin it</button>
+                </form>
+              </details>
+            </div>
           )
         }
         {editable && gridFull && <p class="p-hint mono">Grid full — unpin something to make room.</p>}
@@ -540,6 +604,40 @@ const canRemove = (note: WallEntry) => viewerId === profileId || viewerId === no
     border-color: var(--ember);
     color: var(--ember);
   }
+  .p-card-acts form {
+    flex: 1;
+    display: flex;
+  }
+  .p-pin {
+    flex: 1;
+    background: none;
+    text-align: center;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 9px 8px;
+    color: var(--ink-2);
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 9px;
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  button.p-pin:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+  .p-pin-done {
+    cursor: default;
+    color: var(--ink-3);
+  }
+  .p-card-msg {
+    margin-top: 10px;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ember-deep);
+  }
 
   /* account box */
   .p-admin {
@@ -758,9 +856,21 @@ const canRemove = (note: WallEntry) => viewerId === profileId || viewerId === no
     color: var(--ember);
   }
 
-  /* add-to-grid dropdown (plain <details> — no island) */
-  .p-add {
+  /* add-to-grid dropdowns (plain <details> — no island): the catalog
+     shortlist and the free-form entry form sit in one control row */
+  .p-adds {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
     margin-top: 18px;
+  }
+  .p-grid-msg {
+    margin-top: 14px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ember-deep);
   }
   .p-add summary {
     display: inline-block;
@@ -830,6 +940,23 @@ const canRemove = (note: WallEntry) => viewerId === profileId || viewerId === no
   }
   .p-add-row:hover .p-add-plus {
     color: var(--ember);
+  }
+
+  /* free-form entry form (field chrome comes from the global ugc-* classes) */
+  .p-free {
+    margin-top: 10px;
+    width: min(380px, 100%);
+    border: 1px solid var(--hairline);
+    background: var(--surface-1);
+    padding: 16px;
+  }
+  .p-free > div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .p-free input:user-invalid {
+    border-color: var(--ember-deep);
   }
 
   /* comment wall */

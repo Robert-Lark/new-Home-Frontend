@@ -4,7 +4,7 @@ import Base from '../layouts/Base.astro';
 import ProfilePage from '../components/ProfilePage.astro';
 import { getEpisodes } from '../lib/content';
 import { isAdmin } from '../lib/supabase-admin';
-import { CONNECTION_CATALOG, MAX_CONNECTIONS } from '../lib/connections';
+import { CONNECTION_CATALOG, CONNECTION_KINDS, MAX_CONNECTIONS } from '../lib/connections';
 import {
   buildActivity,
   getConnections,
@@ -29,8 +29,10 @@ const supabase = Astro.locals.supabase;
 
 // Grid edits and wall actions are plain POSTs back to this page; redirect
 // after success (PRG) so a refresh never re-pins or re-posts. RLS scopes
-// every write to the signed-in user. Failed wall actions render inline.
+// every write to the signed-in user. Failed wall actions and failed
+// free-form adds render inline.
 let wallResult: WallActionResult | null = null;
+let gridResult: { ok: boolean; message: string } | null = null;
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
   const action = form.get('action');
@@ -54,11 +56,53 @@ if (Astro.request.method === 'POST') {
         });
       }
     }
+  } else if (action === 'add-free-connection') {
+    // Free-form grid entry. Server-side validation is the real gate (the
+    // form's required/pattern attributes are UX only): trim + cap like
+    // wall.ts, kind from the catalog's list minus 'listener' (reserved for
+    // real listener pins), links restricted to http(s).
+    const name = String(form.get('name') ?? '').trim().slice(0, 80);
+    const kind = String(form.get('kind') ?? '');
+    const link = String(form.get('link') ?? '').trim().slice(0, 500);
+    if (!name) {
+      gridResult = { ok: false, message: 'Give it a name first.' };
+    } else if (!(CONNECTION_KINDS as readonly string[]).includes(kind) || kind === 'listener') {
+      gridResult = { ok: false, message: 'Pick a kind from the list.' };
+    } else if (link && !/^https?:\/\//.test(link)) {
+      gridResult = { ok: false, message: 'Links must start with http:// or https://.' };
+    } else {
+      const existing = await getConnections(supabase, user.id);
+      if (existing.length >= MAX_CONNECTIONS) {
+        gridResult = { ok: false, message: 'Grid full — unpin something to make room.' };
+      } else if (existing.some((c) => c.name === name)) {
+        gridResult = { ok: false, message: `“${name}” is already on your grid.` };
+      } else {
+        const { error } = await supabase.from('connections').insert({
+          user_id: user.id,
+          kind,
+          name,
+          image_url: null,
+          link_url: link || null,
+          position: Math.max(0, ...existing.map((c) => c.position)) + 1,
+        });
+        if (error)
+          gridResult = {
+            ok: false,
+            // 23505 = the unique(user_id, name) constraint beat the dedupe
+            // check (a concurrent insert); anything else is most likely the
+            // table not existing yet.
+            message:
+              error.code === '23505'
+                ? `“${name}” is already on your grid.`
+                : 'Could not pin it — has the 0003 migration run?',
+          };
+      }
+    }
   } else if (action === 'remove-connection') {
     const id = String(form.get('id') ?? '');
     if (id) await supabase.from('connections').delete().eq('id', id).eq('user_id', user.id);
   }
-  if (!wallResult) return Astro.redirect('/dashboard');
+  if (!wallResult && !gridResult) return Astro.redirect('/dashboard');
 }
 
 const episodes = await getEpisodes();
@@ -153,6 +197,7 @@ const manage = [
     connections={connections}
     catalog={catalog}
     gridFull={connections.length >= MAX_CONNECTIONS}
+    gridResult={gridResult}
     activity={activity}
     news={news}
     wall={wall}

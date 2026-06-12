@@ -2,6 +2,7 @@
 export const prerender = false;
 import Base from '../../layouts/Base.astro';
 import ProfilePage from '../../components/ProfilePage.astro';
+import { MAX_CONNECTIONS } from '../../lib/connections';
 import { getEpisodes } from '../../lib/content';
 import {
   buildActivity,
@@ -31,13 +32,54 @@ const supabase = Astro.locals.supabase;
 const viewer = Astro.locals.user;
 const own = viewer?.id === id;
 
-// Wall posts/deletes/reports are the page's only forms. Successes redirect
-// (PRG, like the dashboard grid); failures render inline (like report.ts).
+/**
+ * Pin this listener to the viewer's own grid: a snapshot connection row —
+ * display name, avatar, and the /u/<id> link are copied at pin time (Rob's
+ * call, 2026-06-12), so renames/avatar changes don't propagate, and the R2
+ * cleanup pass must treat connections.image_url as live references.
+ * Unpinning is the dashboard's existing remove-connection form.
+ */
+async function pinListener(): Promise<{ ok: boolean; message: string }> {
+  if (!viewer) return { ok: false, message: 'Sign in to pin listeners.' };
+  if (viewer.id === id) return { ok: false, message: 'You can’t pin yourself.' };
+  const [target, targetDetails, mine] = await Promise.all([
+    getProfileRow(supabase, id),
+    getProfileDetails(supabase, id),
+    getConnections(supabase, viewer.id),
+  ]);
+  // RLS hides private profile_details from everyone but their owner, so this
+  // also rejects crafted POSTs against profiles that aren't public.
+  if (!target || !targetDetails?.is_public) return { ok: false, message: 'This page is private.' };
+  if (mine.length >= MAX_CONNECTIONS)
+    return { ok: false, message: 'Your grid is full — unpin something to make room.' };
+  const name = target.display_name || 'A listener';
+  if (mine.some((c) => c.link_url === `/u/${id}` || c.name === name))
+    return { ok: false, message: 'Already on your grid.' };
+  const { error } = await supabase.from('connections').insert({
+    user_id: viewer.id,
+    kind: 'listener',
+    name,
+    image_url: target.avatar_url,
+    link_url: `/u/${id}`,
+    position: Math.max(0, ...mine.map((c) => c.position)) + 1,
+  });
+  if (error) return { ok: false, message: 'Could not pin — has the 0003 migration run?' };
+  return { ok: true, message: 'Pinned.' };
+}
+
+// Wall posts/deletes/reports and listener pins are the page's forms; both go
+// through the same action dispatch. Successes redirect (PRG, like the
+// dashboard grid); failures render inline (like report.ts).
 let wallResult: WallActionResult | null = null;
+let pinResult: { ok: boolean; message: string } | null = null;
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
   wallResult = await handleWallAction(form, viewer, supabase, id);
   if (wallResult?.ok) return Astro.redirect(`/u/${id}#wall`);
+  if (!wallResult && form.get('action') === 'pin-listener') {
+    pinResult = await pinListener();
+    if (pinResult.ok) return Astro.redirect(`/u/${id}`);
+  }
 }
 
 const profile = await getProfileRow(supabase, id);
@@ -60,6 +102,19 @@ const [connections, content, news, wallComments] = visible
 
 const wall = await resolveWallEntries(supabase, wallComments);
 const activity = buildActivity({ content, episodesByRef: epByRef, connections, wallNotes: wall });
+
+// "Pin to my grid" shows for signed-in visitors who aren't the owner, haven't
+// pinned this listener yet, and have grid room (pinListener re-checks it all).
+const mine = viewer && !own && visible ? await getConnections(supabase, viewer.id) : [];
+const alreadyPinned = mine.some((c) => c.kind === 'listener' && c.link_url === `/u/${id}`);
+const pinState: 'available' | 'pinned' | null =
+  !viewer || own || !visible
+    ? null
+    : alreadyPinned
+      ? 'pinned'
+      : mine.length < MAX_CONNECTIONS
+        ? 'available'
+        : null;
 
 const song = details?.profile_song_ref
   ? await resolveTrack(supabase, details.profile_song_ref, epByRef)
@@ -89,6 +144,8 @@ const memberSince = profile?.created_at
         isPublic={details?.is_public ?? false}
         song={song}
         connections={connections}
+        pinState={pinState}
+        pinResult={pinResult}
         activity={activity}
         news={news}
         wall={wall}
