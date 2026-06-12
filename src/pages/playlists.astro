@@ -211,7 +211,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
   .lib-create-btn {
     flex: none;
     background: var(--ember);
-    color: #0d0e10;
+    color: var(--on-ember);
     border: none;
     border-radius: 999px;
     padding: 10px 18px;
@@ -311,11 +311,11 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
   .ql-menu {
     position: fixed;
     z-index: 120;
-    background: rgba(20, 21, 24, 0.96);
+    background: var(--glass-strong);
     backdrop-filter: blur(18px) saturate(120%);
     border: 1px solid var(--hairline);
     border-radius: 10px;
-    box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.85);
+    box-shadow: 0 24px 60px -20px color-mix(in srgb, var(--shadow) 85%, transparent);
     padding: 12px;
   }
   .ql-menu-h {
@@ -356,7 +356,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     display: grid;
     place-items: center;
     font-size: 10px;
-    color: #0d0e10;
+    color: var(--on-ember);
   }
   .ql-check.on {
     background: var(--ember);
@@ -395,7 +395,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     flex: none;
     width: 34px;
     background: var(--ember);
-    color: #0d0e10;
+    color: var(--on-ember);
     border: none;
     border-radius: 6px;
     cursor: pointer;

@@ -9,12 +9,18 @@ interface Props {
   description?: string;
   /** Marks the active nav item. */
   section?: 'listen' | 'archive' | 'interviews' | 'community' | 'playlists' | 'about' | 'account';
+  /** The signed-in user's saved theme, on pages that loaded profile_details
+      (dashboard/settings). Authoritative when present: the pin script
+      re-seeds localStorage from it, so a fresh device picks up the saved
+      preference on first sign-in. */
+  theme?: 'dark' | 'light' | null;
 }
 
 const {
   title = 'Quiet Cast',
   description = 'Mixes & interviews from the edge of the signal.',
   section = 'listen',
+  theme = null,
 } = Astro.props;
 
 const nav = [
@@ -35,6 +41,42 @@ const nav = [
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title === 'Quiet Cast' ? title : `${title} — Quiet Cast`}</title>
     <meta name="description" content={description} />
+    <meta name="color-scheme" content="dark" />
+
+    <!-- Pre-paint theme pin. Dark is the house default; light is an explicit
+         stored choice ([data-theme='light'] override block in tokens.css).
+         Inline and synchronous on purpose — it must run before first paint.
+         Most pages are prerendered static, so the theme can never be
+         server-rendered; the ClientRouter swaps documents, so astro:after-swap
+         re-applies it (reading the swapped-in pin for a server theme). -->
+    <script is:inline data-qc-theme-pin data-server-theme={theme ?? ''}>
+      (() => {
+        const apply = (t) => {
+          const theme = t === 'light' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', theme);
+          const meta = document.querySelector('meta[name="color-scheme"]');
+          if (meta) meta.setAttribute('content', theme);
+        };
+        const resolve = () => {
+          const pin = document.querySelector('script[data-qc-theme-pin]');
+          const server = pin?.getAttribute('data-server-theme');
+          try {
+            if (server === 'light' || server === 'dark') {
+              localStorage.setItem('qc-theme', server);
+              return server;
+            }
+            return localStorage.getItem('qc-theme');
+          } catch {
+            return server || 'dark'; // storage blocked — stay dark
+          }
+        };
+        apply(resolve());
+        if (!window.qcThemePinned) {
+          window.qcThemePinned = true;
+          document.addEventListener('astro:after-swap', () => apply(resolve()));
+        }
+      })();
+    </script>
 
     <!-- Direction A typeface stack: Cormorant Garamond (display caps),
          Spectral (body serif), IBM Plex Mono (numbers/labels). -->

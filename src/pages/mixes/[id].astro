@@ -106,8 +106,8 @@ const tracklist: string[] = Array.isArray(mix.tracklist)
     background: var(--recess);
     border: 1px solid var(--hairline);
     box-shadow:
-      inset 0 2px 30px rgba(0, 0, 0, 0.9),
-      0 40px 100px -30px rgba(0, 0, 0, 0.9);
+      inset 0 2px 30px color-mix(in srgb, var(--shadow) 90%, transparent),
+      0 40px 100px -30px color-mix(in srgb, var(--shadow) 90%, transparent);
   }
   .recess img {
     display: block;
@@ -156,7 +156,7 @@ const tracklist: string[] = Array.isArray(mix.tracklist)
     border: none;
     border-radius: 999px;
     background: var(--ember);
-    color: #0d0e10;
+    color: var(--on-ember);
     cursor: pointer;
     font-family: 'IBM Plex Mono', monospace;
     text-transform: uppercase;

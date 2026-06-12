@@ -115,7 +115,7 @@ if (Astro.request.method === 'POST') {
     const theme = form.get('theme') === 'light' ? 'light' : 'dark';
     const ok = await upsertDetails({ theme });
     result = ok
-      ? { ok: true, scope: 'prefs', message: 'Preference saved. Light mode itself ships later.' }
+      ? { ok: true, scope: 'prefs', message: 'Preference saved.' }
       : { ok: false, scope: 'prefs', message: 'Could not save — has the 0003 migration run?' };
   } else if (action === 'delete-account') {
     if (String(form.get('confirm') ?? '') !== 'DELETE') {
@@ -151,7 +151,7 @@ const details = await getProfileDetails(supabase, user.id);
 const displayName = profile?.display_name || user.email?.split('@')[0] || '';
 ---
 
-<Base title="Settings" section="account">
+<Base title="Settings" section="account" theme={details?.theme ?? null}>
   <section class="settings">
     <header class="set-head">
       <div>
@@ -272,7 +272,7 @@ const displayName = profile?.display_name || user.email?.split('@')[0] || '';
         </label>
         <label class="set-radio">
           <input type="radio" name="theme" value="light" checked={details?.theme === 'light'} />
-          <span><b>Light</b> — saved now, applied when light mode ships.</span>
+          <span><b>Light</b> — the same signal on bone paper.</span>
         </label>
         {result?.scope === 'prefs' && <p class={result.ok ? 'set-ok mono' : 'ugc-error'}>{result.message}</p>}
         <button class="ugc-submit ghost" type="submit">Save preference</button>

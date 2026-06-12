@@ -294,7 +294,7 @@ const span = years.length
   }
   .iv-name[aria-selected='true'] {
     border-left-color: var(--ember-deep);
-    background: linear-gradient(90deg, rgba(111, 43, 56, 0.16), transparent 92%);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--ember-deep) 16%, transparent), transparent 92%);
   }
   .iv-name[aria-selected='true'] .iv-name-artist {
     color: var(--ink);
@@ -315,11 +315,11 @@ const span = years.length
   .iv-panel {
     display: none;
     background: var(--marble);
-    color: #211d15;
-    border: 1px solid #b3ae9f;
+    color: var(--paper-ink);
+    border: 1px solid var(--paper-line);
     box-shadow:
-      0 50px 120px -45px rgba(0, 0, 0, 0.85),
-      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      0 50px 120px -45px color-mix(in srgb, var(--shadow) 85%, transparent),
+      inset 0 1px 0 var(--paper-glint);
     padding: 46px 52px 56px;
   }
   .iv-panel.is-active {
@@ -335,7 +335,7 @@ const span = years.length
     width: 84px;
     height: 84px;
     object-fit: cover;
-    border: 1px solid #b3ae9f;
+    border: 1px solid var(--paper-line);
     filter: grayscale(0.45) contrast(1.05);
     flex: none;
   }
@@ -353,14 +353,14 @@ const span = years.length
     letter-spacing: 0.14em;
     font-size: clamp(28px, 4vw, 50px);
     line-height: 1.04;
-    color: #14110c;
+    color: var(--paper-ink-strong);
     margin: 12px 0 8px;
   }
   .iv-sub {
     font-family: 'Spectral', Georgia, serif;
     font-style: italic;
     font-size: 16px;
-    color: #5c5446;
+    color: var(--paper-ink-soft);
   }
   .iv-listen {
     font-family: 'IBM Plex Mono', monospace;
@@ -375,7 +375,7 @@ const span = years.length
   }
   .iv-doc-rule {
     height: 1px;
-    background: #bdb8a8;
+    background: var(--paper-rule);
     margin: 30px 0 6px;
   }
   .iv-pair {
@@ -395,7 +395,7 @@ const span = years.length
     font-family: 'Spectral', Georgia, serif;
     font-size: 17px;
     line-height: 1.78;
-    color: #2a2419;
+    color: var(--paper-ink-body);
     white-space: pre-wrap;
   }
 
