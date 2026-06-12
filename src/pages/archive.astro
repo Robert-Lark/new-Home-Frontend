@@ -1,49 +1,69 @@
 ---
 import Base from '../layouts/Base.astro';
 import ListenState from '../islands/ListenState';
+import { getEpisodes, type Episode } from '../lib/content';
 
-// Hsieh date-grid ledger. Generated at build time (no client JS) with a
-// deterministic seeded PRNG so output is stable across builds. Phase 3 swaps
-// this for real show dates from Sanity (each marked day links to its show).
+// Hsieh date-grid ledger, driven by real show dates from Sanity
+// (Episode.airDate: the `date` field, or doc-creation date for the imported
+// back catalog). Static HTML at build time; the ListenState island paints
+// per-user listen state on top via data-qc-ref/data-qc-state.
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const YEARS = [2026, 2025, 2024, 2023];
 
-let seed = 7;
-const rnd = () => {
-  seed = (seed * 9301 + 49297) % 233280;
-  return seed / 233280;
-};
+const episodes = (await getEpisodes()).filter((e) => e.airDate);
 
-const years = YEARS.map((yr, yi) => {
+// "YYYY-MM-DD" → shows that day, newest cat first. Import-era docs can share
+// a day; the cell links to the newest and its tooltip lists them all (the
+// clusters dissolve as real air dates are backfilled in the studio).
+const byDay = new Map<string, Episode[]>();
+for (const e of episodes) {
+  byDay.set(e.airDate!, [...(byDay.get(e.airDate!) ?? []), e]);
+}
+for (const list of byDay.values()) list.sort((a, b) => b.cat - a.cat);
+
+// Continuous year range, newest first (a silent year still renders — the
+// emptiness is the point of the ledger).
+const showYears = episodes.map((e) => Number(e.airDate!.slice(0, 4)));
+const maxYear = Math.max(...showYears);
+const minYear = Math.min(...showYears);
+
+const latestSlug = episodes.length
+  ? episodes.reduce((a, b) => (b.cat > a.cat ? b : a)).slug
+  : null;
+
+const years = Array.from({ length: maxYear - minYear + 1 }, (_, i) => maxYear - i).map((yr) => {
   let count = 0;
   const months = MONTHS.map((label, mi) => {
-    const days = mi % 2 ? 30 : 31;
+    const days = new Date(Date.UTC(yr, mi + 1, 0)).getUTCDate();
     const cells = Array.from({ length: days }, (_, idx) => {
       const day = idx + 1;
-      const has = rnd() < 0.34;
-      const live = yi === 0 && mi === 10 && day === 29;
-      if (has || live) count++;
-      return { day, has, live };
+      const key = `${yr}-${String(mi + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const shows = byDay.get(key) ?? [];
+      count += shows.length;
+      return { day, shows };
     });
     return { label, cells };
   });
   return { yr, count, months };
 });
 
-const totalShows = years.reduce((n, y) => n + y.count, 0);
+const totalShows = episodes.length;
+const totalTracks = episodes.reduce((n, e) => n + e.tracklist.length, 0);
+
+const cellLabel = (shows: Episode[]) =>
+  shows.map((s) => `${s.catLabel} · ${s.title} — ${s.artist}`).join(' / ');
 ---
 
 <Base title="The Archive" section="archive">
   <div class="head">
     <h1>The Archive</h1>
     <div class="meta mono">
-      {totalShows} transmissions<br />2021 — 2026<br />614 hours of signal
+      {totalShows} transmissions<br />{minYear === maxYear ? maxYear : `${minYear} — ${maxYear}`}<br />{totalTracks} tracks indexed
     </div>
   </div>
 
   <div class="legend">
     <span><i style="border:1px solid var(--stone)"></i>recorded show</span>
-    <span><i style="background:var(--ember)"></i>now playing</span>
+    <span><i style="background:var(--ember)"></i>latest transmission</span>
     <span><i style="background:var(--surface-1)"></i>silence</span>
   </div>
 
@@ -59,14 +79,26 @@ const totalShows = years.reduce((n, y) => n + y.count, 0);
             {y.months.map((m) => (
               <div class="mo">
                 <div class="ml">{m.label}</div>
-                {/* Phase 3: each real show cell gets data-qc-ref={show.slug} +
-                    an <a> to its page; the ListenState island below then paints
-                    data-qc-state on it. These placeholder cells carry no ref, so
-                    they stay neutral for everyone. */}
+                {/* Show days are links carrying data-qc-ref; the ListenState
+                    island below paints data-qc-state on them. Silent days are
+                    inert spans with no ref, neutral for everyone. */}
                 <div class="dots">
-                  {m.cells.map((c) => (
-                    <span class={c.live ? 'live' : c.has ? 'has' : ''}>{c.has || c.live ? c.day : ''}</span>
-                  ))}
+                  {m.cells.map((c) => {
+                    const first = c.shows[0];
+                    return first ? (
+                      <a
+                        href={`/show/${first.slug}`}
+                        class={first.slug === latestSlug ? 'live' : 'has'}
+                        data-qc-ref={first.slug}
+                        title={cellLabel(c.shows)}
+                        aria-label={`${cellLabel(c.shows)}, ${m.label} ${c.day} ${y.yr}`}
+                      >
+                        {c.day}
+                      </a>
+                    ) : (
+                      <span></span>
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -77,7 +109,7 @@ const totalShows = years.reduce((n, y) => n + y.count, 0);
   </div>
 
   {/* Recolors any [data-qc-ref] cell by the signed-in user's listen state.
-      Neutral for logged-out visitors and until Phase 3 wires real show cells. */}
+      Neutral for logged-out visitors. */}
   <ListenState client:idle />
 </Base>
 
@@ -170,7 +202,8 @@ const totalShows = years.reduce((n, y) => n + y.count, 0);
     grid-template-columns: repeat(8, 1fr);
     gap: 5px;
   }
-  .dots span {
+  .dots span,
+  .dots a {
     aspect-ratio: 1;
     border-radius: 50%;
     font-family: 'IBM Plex Mono', monospace;
@@ -179,34 +212,36 @@ const totalShows = years.reduce((n, y) => n + y.count, 0);
     place-items: center;
     color: transparent;
     background: var(--surface-1);
+    text-decoration: none;
   }
-  .dots span.has {
+  .dots .has {
     background: transparent;
     border: 1px solid var(--stone);
     color: var(--ink-2);
     cursor: pointer;
     transition: all var(--dur-fast) var(--ease-out);
   }
-  .dots span.has:hover {
+  .dots .has:hover {
     border-color: var(--ink);
     color: var(--ink);
     transform: scale(1.15);
   }
-  .dots span.live {
-    background: var(--ember);
-    border-color: var(--ember);
-    color: #0d0e10;
-  }
-  /* Per-user listen state (painted by the ListenState island once cells carry
-     data-qc-ref in Phase 3): in-progress rings ember, done fills faint ember. */
-  .dots span[data-qc-state='in-progress'] {
+  /* Per-user listen state painted by the ListenState island:
+     in-progress rings ember, done fills faint ember. */
+  .dots [data-qc-state='in-progress'] {
     border: 1px solid var(--ember);
     color: var(--ember);
   }
-  .dots span[data-qc-state='done'] {
+  .dots [data-qc-state='done'] {
     background: color-mix(in srgb, var(--ember) 22%, transparent);
     border: 1px solid var(--ember);
     color: var(--ink);
+  }
+  /* Last so the one warm accent always wins, whatever the listen state. */
+  .dots .live {
+    background: var(--ember);
+    border-color: var(--ember);
+    color: #0d0e10;
   }
   @media (max-width: 760px) {
     .year {

@@ -16,6 +16,12 @@ export interface Episode {
   description: string;
   coverUrl: string | null;
   audioUrl: string | null;
+  /**
+   * Air date as "YYYY-MM-DD" (UTC). The Sanity `date` field when set; the
+   * document's creation date otherwise — an approximation for the imported
+   * back catalog, where several shows share one import day.
+   */
+  airDate: string | null;
   year: string | null;
   tracklist: string[];
   /** Q&A pairs from the legacy question1..N / answer1..N fields. */
@@ -30,7 +36,7 @@ interface RawEpisode {
   description: string | null;
   coverUrl: string | null;
   audioUrl: string | null;
-  createdAt: string | null;
+  airDate: string | null;
   tracklist: unknown[] | null;
   qa: Array<{ q: string | null; a: string | null }> | null;
 }
@@ -49,7 +55,7 @@ const EPISODE_PROJECTION = `{
   description,
   "coverUrl": cover.asset->url,
   "audioUrl": audio.asset->url,
-  "createdAt": _createdAt,
+  "airDate": coalesce(date, _createdAt),
   tracklist,
   ${QA_PROJECTION}
 }`;
@@ -65,7 +71,8 @@ function mapEpisode(r: RawEpisode): Episode {
     description: r.description ?? '',
     coverUrl: r.coverUrl,
     audioUrl: r.audioUrl,
-    year: r.createdAt ? r.createdAt.slice(0, 4) : null,
+    airDate: r.airDate ? r.airDate.slice(0, 10) : null,
+    year: r.airDate ? r.airDate.slice(0, 4) : null,
     tracklist: (r.tracklist ?? []).filter((t): t is string => typeof t === 'string'),
     qa: (r.qa ?? [])
       .filter((p): p is { q: string; a: string } => Boolean(p?.q && p?.a))
