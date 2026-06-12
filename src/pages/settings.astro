@@ -252,7 +252,7 @@ const displayName = profile?.display_name || user.email?.split('@')[0] || '';
         </label>
         <label class="set-radio">
           <input type="radio" name="visibility" value="public" checked={details?.is_public} />
-          <span><b>Public</b> — anyone can visit <span class="mono">/u/…</span> and see your page: bio, grid, profile signal, and published work.</span>
+          <span><b>Public</b> — anyone can visit <span class="mono">/u/…</span> and see your page: bio, rotation, profile signal, and published work.</span>
         </label>
         {result?.scope === 'privacy' && <p class={result.ok ? 'set-ok mono' : 'ugc-error'}>{result.message}</p>}
         <button class="ugc-submit ghost" type="submit">Save visibility</button>
@@ -285,7 +285,7 @@ const displayName = profile?.display_name || user.email?.split('@')[0] || '';
         <span class="line"></span>
       </div>
       <p class="set-warn">
-        This removes your profile, favorites, playlists, listening history, grid, and unpublished
+        This removes your profile, favorites, playlists, listening history, rotation, and unpublished
         submissions — permanently. Published contributions are removed with them.
       </p>
       <form class="ugc-form" method="POST">

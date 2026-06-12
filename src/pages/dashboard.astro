@@ -4,6 +4,8 @@ import Base from '../layouts/Base.astro';
 import ProfilePage from '../components/ProfilePage.astro';
 import { getEpisodes } from '../lib/content';
 import { isAdmin } from '../lib/supabase-admin';
+import { IMAGE_TYPES, IMAGE_MAX_BYTES, cdnUrl } from '../lib/ugc';
+import { presignR2Put, r2Configured } from '../lib/r2';
 import { CONNECTION_CATALOG, CONNECTION_KINDS, MAX_CONNECTIONS } from '../lib/connections';
 import {
   buildActivity,
@@ -60,47 +62,95 @@ if (Astro.request.method === 'POST') {
     // Free-form grid entry. Server-side validation is the real gate (the
     // form's required/pattern attributes are UX only): trim + cap like
     // wall.ts, kind from the catalog's list minus 'listener' (reserved for
-    // real listener pins), links restricted to http(s).
+    // real listener pins), links restricted to http(s). The optional image
+    // follows the avatar pattern (settings.astro): small enough that the
+    // bytes transit this route to a presigned R2 PUT. Unpinning later orphans
+    // the object — expected; the R2 cleanup pass collects them.
     const name = String(form.get('name') ?? '').trim().slice(0, 80);
     const kind = String(form.get('kind') ?? '');
     const link = String(form.get('link') ?? '').trim().slice(0, 500);
+    const upload = form.get('image');
+    const file = upload instanceof File && upload.size > 0 ? upload : null;
     if (!name) {
       gridResult = { ok: false, message: 'Give it a name first.' };
     } else if (!(CONNECTION_KINDS as readonly string[]).includes(kind) || kind === 'listener') {
       gridResult = { ok: false, message: 'Pick a kind from the list.' };
     } else if (link && !/^https?:\/\//.test(link)) {
       gridResult = { ok: false, message: 'Links must start with http:// or https://.' };
+    } else if (file && !IMAGE_TYPES[file.type]) {
+      gridResult = { ok: false, message: 'Use a JPG, PNG, or WebP image.' };
+    } else if (file && file.size > IMAGE_MAX_BYTES) {
+      gridResult = {
+        ok: false,
+        message: `Image too large — the limit is ${Math.floor(IMAGE_MAX_BYTES / (1024 * 1024))}MB.`,
+      };
+    } else if (file && !r2Configured()) {
+      gridResult = { ok: false, message: 'Image uploads are not configured on this deployment yet.' };
     } else {
       const existing = await getConnections(supabase, user.id);
       if (existing.length >= MAX_CONNECTIONS) {
-        gridResult = { ok: false, message: 'Grid full — unpin something to make room.' };
+        gridResult = { ok: false, message: 'Rotation full — unpin something to make room.' };
       } else if (existing.some((c) => c.name === name)) {
-        gridResult = { ok: false, message: `“${name}” is already on your grid.` };
+        gridResult = { ok: false, message: `“${name}” is already in your rotation.` };
       } else {
-        const { error } = await supabase.from('connections').insert({
-          user_id: user.id,
-          kind,
-          name,
-          image_url: null,
-          link_url: link || null,
-          position: Math.max(0, ...existing.map((c) => c.position)) + 1,
-        });
-        if (error)
-          gridResult = {
-            ok: false,
-            // 23505 = the unique(user_id, name) constraint beat the dedupe
-            // check (a concurrent insert); anything else is most likely the
-            // table not existing yet.
-            message:
-              error.code === '23505'
-                ? `“${name}” is already on your grid.`
-                : 'Could not pin it — has the 0003 migration run?',
-          };
+        let imageUrl: string | null = null;
+        if (file) {
+          const key = `user/${user.id}/grid/${crypto.randomUUID()}.${IMAGE_TYPES[file.type]}`;
+          const put = await fetch(await presignR2Put(key), {
+            method: 'PUT',
+            headers: { 'Content-Type': file.type },
+            body: await file.arrayBuffer(),
+          });
+          if (!put.ok) gridResult = { ok: false, message: 'Image upload failed — try again.' };
+          else imageUrl = cdnUrl(key);
+        }
+        if (!gridResult) {
+          const { error } = await supabase.from('connections').insert({
+            user_id: user.id,
+            kind,
+            name,
+            image_url: imageUrl,
+            link_url: link || null,
+            position: Math.max(0, ...existing.map((c) => c.position)) + 1,
+          });
+          if (error)
+            gridResult = {
+              ok: false,
+              // 23505 = the unique(user_id, name) constraint beat the dedupe
+              // check (a concurrent insert); anything else is most likely the
+              // table not existing yet.
+              message:
+                error.code === '23505'
+                  ? `“${name}” is already in your rotation.`
+                  : 'Could not pin it — has the 0003 migration run?',
+            };
+        }
       }
     }
   } else if (action === 'remove-connection') {
     const id = String(form.get('id') ?? '');
     if (id) await supabase.from('connections').delete().eq('id', id).eq('user_id', user.id);
+  } else if (action === 'reorder-connections') {
+    // Full intended order as a comma-separated id list (from the RotationGrid
+    // island's drag/move controls, or their no-JS form fallbacks). Only a
+    // permutation of the user's current rows is accepted — anything else means
+    // the form was stale (a concurrent add/remove) or crafted.
+    const existing = await getConnections(supabase, user.id);
+    const ids = String(form.get('order') ?? '').split(',').filter(Boolean);
+    const mine = new Set(existing.map((c) => c.id));
+    const valid =
+      ids.length === existing.length && new Set(ids).size === ids.length && ids.every((id) => mine.has(id));
+    if (!valid) {
+      gridResult = { ok: false, message: 'Could not save that order — refresh and try again.' };
+    } else {
+      const results = await Promise.all(
+        ids.map((id, i) =>
+          supabase.from('connections').update({ position: i }).eq('id', id).eq('user_id', user.id),
+        ),
+      );
+      if (results.some((r) => r.error))
+        gridResult = { ok: false, message: 'Could not save that order — try again.' };
+    }
   }
   if (!wallResult && !gridResult) return Astro.redirect('/dashboard');
 }

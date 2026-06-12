@@ -51,10 +51,10 @@ async function pinListener(): Promise<{ ok: boolean; message: string }> {
   // also rejects crafted POSTs against profiles that aren't public.
   if (!target || !targetDetails?.is_public) return { ok: false, message: 'This page is private.' };
   if (mine.length >= MAX_CONNECTIONS)
-    return { ok: false, message: 'Your grid is full — unpin something to make room.' };
+    return { ok: false, message: 'Your rotation is full — unpin something to make room.' };
   const name = target.display_name || 'A listener';
   if (mine.some((c) => c.link_url === `/u/${id}` || c.name === name))
-    return { ok: false, message: 'Already on your grid.' };
+    return { ok: false, message: 'Already in your rotation.' };
   const { error } = await supabase.from('connections').insert({
     user_id: viewer.id,
     kind: 'listener',

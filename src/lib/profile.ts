@@ -210,7 +210,7 @@ export function buildActivity(opts: {
     events.push({ kind: 'listening', text: `${verb} “${t.title}”`, href: t.href, at: l.updated_at });
   }
   for (const c of opts.connections ?? [])
-    events.push({ kind: 'grid', text: `Pinned ${c.name} to the grid`, href: c.link_url, at: c.created_at });
+    events.push({ kind: 'rotation', text: `Pinned ${c.name} to the rotation`, href: c.link_url, at: c.created_at });
   for (const w of opts.wallNotes ?? [])
     events.push({ kind: 'wall', text: `Got a wall note from ${w.author_name}`, href: '#wall', at: w.created_at });
 

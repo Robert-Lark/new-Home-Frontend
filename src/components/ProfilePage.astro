@@ -1,18 +1,21 @@
 ---
 import type { Track } from '../islands/PlayerDock';
+import RotationGrid from '../islands/RotationGrid';
 import { CONNECTION_KINDS, type CatalogEntry } from '../lib/connections';
 import type { ActivityEvent, Connection, NewsItem } from '../lib/profile';
 import type { WallActionResult, WallEntry } from '../lib/wall';
-import { ugcDate } from '../lib/ugc';
+import { IMAGE_MAX_BYTES, ugcDate } from '../lib/ugc';
 
 /**
  * Shared profile shell, old-web "top friends" anatomy in the site's own
  * vocabulary: profile card top-left, module boxes down the left column
  * (account, site news, slot "side"), and the main column with the bio blurb,
- * latest-activity list, and the connections grid. Used by /dashboard
- * (editable) and /u/[id] (read-only). Grid edits are plain POST forms handled
- * by the hosting page (dashboard: catalog/free-form adds + removes; /u/[id]:
- * listener pins) — no JS beyond the existing player island.
+ * latest-activity list, and the rotation (connections) grid. Used by
+ * /dashboard (editable) and /u/[id] (read-only). Grid edits are plain POST
+ * forms handled by the hosting page (dashboard: catalog/free-form adds +
+ * removes + reorders; /u/[id]: listener pins). The tiles render through the
+ * RotationGrid island — static HTML on the public view, hydrated on
+ * /dashboard for drag/keyboard reordering.
  */
 interface Props {
   editable: boolean;
@@ -83,8 +86,8 @@ const initial = (displayName.trim()[0] ?? 'Q').toUpperCase();
 const canRemove = (note: WallEntry) => viewerId === profileId || viewerId === note.author_id;
 /** Free-form entries can be anything except another listener — pins own that kind. */
 const freeKinds = CONNECTION_KINDS.filter((k) => k !== 'listener');
-/** Off-site tile links open in a new tab; in-app links (listener pins) stay put. */
-const offsite = (url: string | null) => Boolean(url && !url.startsWith('/'));
+/** Island props — just the fields the tiles render. */
+const tiles = connections.map(({ id, name, kind, image_url, link_url }) => ({ id, name, kind, image_url, link_url }));
 ---
 
 <section class="profile">
@@ -142,10 +145,10 @@ const offsite = (url: string | null) => Boolean(url && !url.startsWith('/'));
                 {pinState === 'available' ? (
                   <form method="POST">
                     <input type="hidden" name="action" value="pin-listener" />
-                    <button class="p-pin" type="submit">Pin to my grid</button>
+                    <button class="p-pin" type="submit">Pin to my rotation</button>
                   </form>
                 ) : (
-                  <span class="p-pin p-pin-done">On your grid</span>
+                  <span class="p-pin p-pin-done">In your rotation</span>
                 )}
               </div>
             )
@@ -241,7 +244,7 @@ const offsite = (url: string | null) => Boolean(url && !url.startsWith('/'));
 
       <section>
         <div class="section-label p-label">
-          <span class="eyebrow">{displayName}’s grid</span>
+          <span class="eyebrow">{displayName}’s rotation</span>
           <span class="line"></span>
           <span class="eyebrow">{connections.length}</span>
         </div>
@@ -249,37 +252,13 @@ const offsite = (url: string | null) => Boolean(url && !url.startsWith('/'));
           connections.length === 0 ? (
             <p class="p-empty">
               {editable
-                ? 'Nothing pinned yet. The grid is for the artists, labels, and places that shape your listening.'
+                ? 'Nothing pinned yet. Your rotation is the artists, labels, and places that shape your listening.'
                 : 'Nothing pinned yet.'}
             </p>
+          ) : editable ? (
+            <RotationGrid client:load tiles={tiles} editable={true} />
           ) : (
-            <ul class="p-grid">
-              {connections.map((c) => (
-                <li class="p-tile">
-                  <a
-                    class="p-tile-link"
-                    href={c.link_url ?? undefined}
-                    target={offsite(c.link_url) ? '_blank' : undefined}
-                    rel={offsite(c.link_url) ? 'nofollow noopener ugc' : undefined}
-                  >
-                    {c.image_url ? (
-                      <img src={c.image_url} alt="" loading="lazy" />
-                    ) : (
-                      <div class="p-tile-fallback" aria-hidden="true">{c.name[0]}</div>
-                    )}
-                    <span class="p-tile-n">{c.name}</span>
-                    <span class="p-chip mono">{c.kind}</span>
-                  </a>
-                  {editable && (
-                    <form method="POST">
-                      <input type="hidden" name="action" value="remove-connection" />
-                      <input type="hidden" name="id" value={c.id} />
-                      <button class="p-tile-x mono" type="submit" aria-label={`Unpin ${c.name}`}>×</button>
-                    </form>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <RotationGrid tiles={tiles} editable={false} />
           )
         }
         {gridResult && !gridResult.ok && <p class="p-grid-msg mono">{gridResult.message}</p>}
@@ -288,28 +267,44 @@ const offsite = (url: string | null) => Boolean(url && !url.startsWith('/'));
             <div class="p-adds">
               {catalog.length > 0 && (
                 <details class="p-add">
-                  <summary class="mono">Pin to the grid</summary>
-                  <ul class="p-add-panel">
-                    {catalog.map((entry) => (
-                      <li>
-                        <form method="POST">
-                          <input type="hidden" name="action" value="add-connection" />
-                          <input type="hidden" name="slug" value={entry.slug} />
-                          <button class="p-add-row" type="submit">
-                            <img src={entry.image} alt="" loading="lazy" />
-                            <span class="p-add-n">{entry.name}</span>
-                            <span class="p-chip mono">{entry.kind}</span>
-                            <span class="p-add-plus mono" aria-hidden="true">+</span>
-                          </button>
-                        </form>
-                      </li>
-                    ))}
-                  </ul>
+                  <summary class="mono">Pin to the rotation</summary>
+                  <div class="p-add-box">
+                    {/* Type-to-filter combobox over the rows below. Revealed only
+                        when scripting is on — without JS the full list simply
+                        scrolls. (<datalist> can't render image + chip rows.) */}
+                    <search class="p-add-search">
+                      <label class="visually-hidden" for="catalog-filter">Filter the catalog by name</label>
+                      <input
+                        class="ugc-input"
+                        id="catalog-filter"
+                        type="search"
+                        placeholder="Type to filter…"
+                        autocomplete="off"
+                      />
+                      <p class="p-add-count mono" aria-live="polite"></p>
+                    </search>
+                    <ul class="p-add-panel" role="list">
+                      {catalog.map((entry) => (
+                        <li data-name={entry.name.toLowerCase()}>
+                          <form method="POST">
+                            <input type="hidden" name="action" value="add-connection" />
+                            <input type="hidden" name="slug" value={entry.slug} />
+                            <button class="p-add-row" type="submit">
+                              <img src={entry.image} alt="" loading="lazy" />
+                              <span class="p-add-n">{entry.name}</span>
+                              <span class="p-chip mono">{entry.kind}</span>
+                              <span class="p-add-plus mono" aria-hidden="true">+</span>
+                            </button>
+                          </form>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </details>
               )}
               <details class="p-add" open={Boolean(gridResult)}>
                 <summary class="mono">Add your own</summary>
-                <form class="p-free ugc-form" method="POST">
+                <form class="p-free ugc-form" method="POST" enctype="multipart/form-data">
                   <input type="hidden" name="action" value="add-free-connection" />
                   <div>
                     <label class="ugc-label" for="free-name">Name</label>
@@ -334,13 +329,24 @@ const offsite = (url: string | null) => Boolean(url && !url.startsWith('/'));
                       title="Must start with http:// or https://"
                     />
                   </div>
+                  <div>
+                    <label class="ugc-label" for="free-image">Image — optional</label>
+                    <input
+                      class="ugc-file"
+                      id="free-image"
+                      type="file"
+                      name="image"
+                      accept="image/jpeg,image/png,image/webp"
+                    />
+                    <span class="ugc-hint">JPG, PNG, or WebP — up to {Math.floor(IMAGE_MAX_BYTES / (1024 * 1024))}MB.</span>
+                  </div>
                   <button class="ugc-submit ghost" type="submit">Pin it</button>
                 </form>
               </details>
             </div>
           )
         }
-        {editable && gridFull && <p class="p-hint mono">Grid full — unpin something to make room.</p>}
+        {editable && gridFull && <p class="p-hint mono">Rotation full — unpin something to make room.</p>}
       </section>
 
       <section id="wall">
@@ -433,6 +439,56 @@ const offsite = (url: string | null) => Boolean(url && !url.startsWith('/'));
     </div>
   </div>
 </section>
+
+<script>
+  // Catalog "combobox": type-to-filter over the server-rendered catalog rows,
+  // first 10 matches shown, ArrowDown hops from the input into the list.
+  // Document-level delegation so it survives ClientRouter page swaps with no
+  // per-page init; CSS (@media scripting) reveals the input only when JS runs.
+  const CAP = 10;
+  let countTimer: ReturnType<typeof setTimeout>;
+
+  function applyFilter(input: HTMLInputElement): void {
+    const box = input.closest('.p-add-box');
+    if (!box) return;
+    const q = input.value.trim().toLowerCase();
+    let matches = 0;
+    for (const li of box.querySelectorAll<HTMLLIElement>('.p-add-panel > li')) {
+      const hit = !q || (li.dataset.name ?? '').includes(q);
+      if (hit) matches++;
+      li.hidden = !hit || matches > CAP;
+    }
+    const count = box.querySelector('.p-add-count');
+    if (!count) return;
+    // Debounced so the live region doesn't talk over every keystroke.
+    clearTimeout(countTimer);
+    countTimer = setTimeout(() => {
+      count.textContent = !q
+        ? ''
+        : matches === 0
+          ? 'No matches'
+          : matches > CAP
+            ? `First ${CAP} of ${matches} matches`
+            : `${matches} ${matches === 1 ? 'match' : 'matches'}`;
+    }, 300);
+  }
+
+  document.addEventListener('input', (e) => {
+    const t = e.target;
+    if (t instanceof HTMLInputElement && t.id === 'catalog-filter') applyFilter(t);
+  });
+  document.addEventListener('keydown', (e) => {
+    const t = e.target;
+    if (e.key !== 'ArrowDown' || !(t instanceof HTMLInputElement) || t.id !== 'catalog-filter') return;
+    const first = t
+      .closest('.p-add-box')
+      ?.querySelector<HTMLButtonElement>('.p-add-panel li:not([hidden]) button');
+    if (first) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+</script>
 
 <style>
   .profile {
@@ -781,80 +837,8 @@ const offsite = (url: string | null) => Boolean(url && !url.startsWith('/'));
     white-space: nowrap;
   }
 
-  /* connections grid */
-  .p-grid {
-    list-style: none;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-  }
-  .p-tile {
-    position: relative;
-  }
-  .p-tile-link {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    text-decoration: none;
-    padding-bottom: 12px;
-  }
-  .p-tile-link img,
-  .p-tile-fallback {
-    width: 100%;
-    aspect-ratio: 1;
-    object-fit: cover;
-    display: block;
-    border: 1px solid var(--hairline);
-    filter: grayscale(0.35) contrast(1.05);
-    transition: filter var(--dur-fast) var(--ease-out);
-  }
-  .p-tile-link:hover img {
-    filter: none;
-  }
-  .p-tile-fallback {
-    display: grid;
-    place-items: center;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 52px;
-    color: var(--ink-3);
-    background: var(--surface-2);
-  }
-  .p-tile-n {
-    margin-top: 4px;
-    font-size: 12px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ink);
-  }
-  .p-chip {
-    align-self: flex-start;
-    font-size: 8px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--steel);
-    border: 1px solid var(--hairline);
-    border-radius: 999px;
-    padding: 2px 8px;
-  }
-  .p-tile-x {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 24px;
-    height: 24px;
-    border-radius: 999px;
-    border: 1px solid var(--hairline);
-    background: rgba(8, 9, 11, 0.72);
-    color: var(--ink-2);
-    font-size: 13px;
-    line-height: 1;
-    cursor: pointer;
-    transition: all var(--dur-fast) var(--ease-out);
-  }
-  .p-tile-x:hover {
-    border-color: var(--ember);
-    color: var(--ember);
-  }
+  /* tile styles live in the is:global block below — the RotationGrid island
+     renders them, and Astro's scoping attributes never reach island DOM */
 
   /* add-to-grid dropdowns (plain <details> — no island): the catalog
      shortlist and the free-form entry form sit in one control row */
@@ -864,13 +848,6 @@ const offsite = (url: string | null) => Boolean(url && !url.startsWith('/'));
     align-items: flex-start;
     gap: 12px;
     margin-top: 18px;
-  }
-  .p-grid-msg {
-    margin-top: 14px;
-    font-size: 10px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ember-deep);
   }
   .p-add summary {
     display: inline-block;
@@ -896,14 +873,41 @@ const offsite = (url: string | null) => Boolean(url && !url.startsWith('/'));
     border-color: var(--ember);
     color: var(--ember);
   }
-  .p-add-panel {
-    list-style: none;
+  .p-add-box {
     margin-top: 10px;
     max-width: 460px;
     border: 1px solid var(--hairline);
     background: var(--surface-1);
   }
-  .p-add-panel li + li {
+  /* the filter input is dead weight without JS — reveal it only when
+     scripting is on; the no-JS panel just scrolls */
+  .p-add-search {
+    display: none;
+  }
+  @media (scripting: enabled) {
+    .p-add-search {
+      display: block;
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid var(--hairline-soft);
+    }
+  }
+  .p-add-count {
+    margin-top: 8px;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .p-add-count:empty {
+    display: none;
+  }
+  .p-add-panel {
+    list-style: none;
+    /* ~10 rows tall, then it scrolls */
+    max-height: min(650px, 70vh);
+    overflow-y: auto;
+  }
+  .p-add-panel li:not([hidden]) ~ li:not([hidden]) {
     border-top: 1px solid var(--hairline-soft);
   }
   .p-add-row {
@@ -1077,6 +1081,128 @@ const offsite = (url: string | null) => Boolean(url && !url.startsWith('/'));
       grid-template-columns: 1fr;
       gap: 34px;
     }
+  }
+</style>
+
+<style is:global>
+  /* ---- rotation tiles (rendered by the RotationGrid island) ---- */
+  .p-grid {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .p-tile {
+    position: relative;
+  }
+  .p-tile[data-dragging] {
+    opacity: 0.6;
+    outline: 1px dashed var(--steel);
+    outline-offset: 2px;
+  }
+  .p-tile-link {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-decoration: none;
+    padding-bottom: 12px;
+  }
+  .p-tile-link img,
+  .p-tile-fallback {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+    border: 1px solid var(--hairline);
+    filter: grayscale(0.35) contrast(1.05);
+    transition: filter var(--dur-fast) var(--ease-out);
+  }
+  .p-tile-link:hover img {
+    filter: none;
+  }
+  .p-tile-fallback {
+    display: grid;
+    place-items: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 52px;
+    color: var(--ink-3);
+    background: var(--surface-2);
+  }
+  .p-tile-n {
+    margin-top: 4px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .p-chip {
+    align-self: flex-start;
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--steel);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+  .p-tile-x,
+  .p-tile-grab,
+  .p-tile-mv {
+    position: absolute;
+    top: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: rgba(8, 9, 11, 0.72);
+    color: var(--ink-2);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .p-tile-x {
+    right: 6px;
+  }
+  .p-tile-x:hover,
+  .p-tile-grab:hover,
+  .p-tile-mv:hover:not(:disabled) {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+  /* drag handle: touch-action none is what makes touch dragging possible —
+     without it the browser claims the gesture for scrolling */
+  .p-tile-grab {
+    left: 6px;
+    touch-action: none;
+    cursor: grab;
+  }
+  .p-tile[data-dragging] .p-tile-grab {
+    cursor: grabbing;
+  }
+  .p-tile-mvs {
+    position: absolute;
+    top: 6px;
+    left: 36px;
+    display: flex;
+    gap: 4px;
+  }
+  .p-tile-mv {
+    position: static;
+    font-size: 10px;
+  }
+  .p-tile-mv:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .p-grid-msg {
+    margin-top: 14px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ember-deep);
+  }
+  @media (max-width: 920px) {
     .p-grid {
       grid-template-columns: repeat(2, 1fr);
     }
