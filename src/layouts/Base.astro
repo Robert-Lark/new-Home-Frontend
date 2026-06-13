@@ -97,7 +97,17 @@ const nav = [
 
     <header class="site-header">
       <a href="/" class="brand">Quiet&nbsp;Cast</a>
-      <nav class="site-nav">
+      <button
+        type="button"
+        class="nav-toggle"
+        aria-label="Menu"
+        aria-controls="site-nav"
+        aria-expanded="false"
+        data-qc-nav-toggle
+      >
+        <span class="nav-toggle-bars"></span>
+      </button>
+      <nav class="site-nav" id="site-nav" aria-label="Primary">
         {
           nav.map((item) => (
             <a href={item.href} aria-current={section === item.key ? 'page' : undefined}>
@@ -107,6 +117,51 @@ const nav = [
         }
       </nav>
     </header>
+
+    {/* Mobile nav disclosure. The full row only fits above ~1000px (brand +
+        7 tracked-caps links); below that the nav collapses to this toggle.
+        Inline + delegated on document so it survives the ClientRouter DOM
+        swap without re-binding — same idiom as the theme pin above. */}
+    <script is:inline data-qc-nav>
+      (() => {
+        if (window.qcNavInit) return;
+        window.qcNavInit = true;
+        const SEL = '[data-qc-nav-toggle]';
+        const openBtn = () => document.querySelector(SEL + '[aria-expanded="true"]');
+        const set = (btn, open) => btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+        document.addEventListener('click', (e) => {
+          const btn = e.target.closest(SEL);
+          if (btn) {
+            set(btn, btn.getAttribute('aria-expanded') !== 'true');
+            return;
+          }
+          const open = openBtn();
+          if (!open) return;
+          // A link closes the panel (then ClientRouter navigates); so does
+          // any click outside the panel.
+          if (e.target.closest('.site-nav a') || !e.target.closest('.site-nav')) {
+            set(open, false);
+          }
+        });
+
+        // Escape closes and returns focus to the toggle.
+        document.addEventListener('keydown', (e) => {
+          if (e.key !== 'Escape') return;
+          const open = openBtn();
+          if (open) {
+            set(open, false);
+            open.focus();
+          }
+        });
+
+        // Belt-and-suspenders: collapse before a client-side page swap.
+        document.addEventListener('astro:before-swap', () => {
+          const open = openBtn();
+          if (open) set(open, false);
+        });
+      })();
+    </script>
 
     <main id="main-content">
       <slot />
