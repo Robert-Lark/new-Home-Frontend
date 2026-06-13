@@ -79,6 +79,25 @@ const albums = await safe<{
     .limit(12),
 );
 
+/**
+ * The permanent listener directory at the top of the page. `profiles` is
+ * world-readable (0001 `profiles_select_all`), so this lists everyone signed
+ * up; each tile links to /u/<id>, which already renders the "page is private"
+ * view for listeners who haven't made their profile public. display_name is
+ * never null (the handle_new_user trigger seeds it from the email local-part).
+ */
+const members = await safe<{
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+}>(
+  supabase
+    .from('profiles')
+    .select('id, display_name, avatar_url, created_at')
+    .order('created_at', { ascending: false }),
+);
+
 const uids = [
   ...mixes.map((m) => m.user_id),
   ...posts.map((p) => p.user_id),
@@ -112,6 +131,36 @@ const empty = mixes.length + posts.length + lists.length + albums.length === 0;
       </div>
       <a class="cta" href={signedIn ? '/contribute' : '/login'}>Contribute</a>
     </header>
+
+    <div class="section-label">
+      <span class="eyebrow">Listeners</span>
+      <span class="line" />
+      <span class="eyebrow">{members.length}</span>
+    </div>
+    {
+      members.length > 0 ? (
+        <div class="member-grid">
+          {members.map((m) => {
+            const name = m.display_name?.trim() || 'A listener';
+            const initial = (name[0] ?? 'Q').toUpperCase();
+            return (
+              <a class="member" href={`/u/${m.id}`}>
+                {m.avatar_url ? (
+                  <img class="m-avatar" src={m.avatar_url} alt="" loading="lazy" />
+                ) : (
+                  <span class="m-avatar m-fallback" aria-hidden="true">
+                    {initial}
+                  </span>
+                )}
+                <span class="m-name mono">{name}</span>
+              </a>
+            );
+          })}
+        </div>
+      ) : (
+        <p class="empty">No listeners yet.</p>
+      )
+    }
 
     {
       empty && (
@@ -303,6 +352,57 @@ const empty = mixes.length + posts.length + lists.length + albums.length === 0;
     color: var(--ink-2);
   }
 
+  /* Listener directory — square avatars to match the rest of the site. */
+  .member-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: 10px;
+  }
+  .member {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-decoration: none;
+    text-align: center;
+  }
+  .m-avatar {
+    width: 100%;
+    aspect-ratio: 1;
+    display: block;
+    object-fit: cover;
+    background: var(--recess);
+    border: 1px solid var(--hairline);
+    filter: grayscale(0.35) contrast(1.05);
+    transition: filter var(--dur-fast) var(--ease-out);
+  }
+  .member:hover .m-avatar {
+    filter: none;
+  }
+  .m-fallback {
+    display: grid;
+    place-items: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: 2.25rem;
+    color: var(--ink-3);
+    box-shadow: inset 0 2px 24px color-mix(in srgb, var(--shadow) 70%, transparent);
+  }
+  .m-name {
+    display: block;
+    max-width: 100%;
+    font-size: 0.625rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .member:hover .m-name {
+    color: var(--ember);
+  }
+
   .mix-grid,
   .album-grid {
     display: grid;
@@ -390,6 +490,9 @@ const empty = mixes.length + posts.length + lists.length + albums.length === 0;
     .mix-grid,
     .album-grid {
       grid-template-columns: repeat(2, 1fr);
+    }
+    .member-grid {
+      grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
     }
   }
 </style>
