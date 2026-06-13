@@ -1,6 +1,11 @@
 /* Quiet Cast — global chrome + motion. Loaded after tokens.css. */
 
-/* ---- Typography base (direction A: Fog Minimal) ---- */
+/* ---- Typography base (direction A: Fog Minimal) ----
+   Font sizes are rem against the browser root (no font-size is set on
+   html/:root), so every size honors the reader's browser/OS text-size and
+   zoom — 1rem = 16px at the default. Keep new type in rem, not px. The two
+   registers: Spectral-serif reading copy lives at >=1rem; the IBM-Plex-Mono
+   tracked-caps label tier sits at 0.625-0.6875rem (10-11px). */
 body {
   font-family: 'Spectral', Georgia, serif;
   font-weight: 300;
@@ -37,7 +42,7 @@ a {
   font-weight: 300;
   text-transform: uppercase;
   letter-spacing: 0.62em;
-  font-size: 15px;
+  font-size: 1rem;
   color: var(--ink);
   padding-left: 0.62em;
   text-decoration: none;
@@ -52,7 +57,7 @@ a {
   font-family: 'IBM Plex Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.28em;
-  font-size: 10px;
+  font-size: 0.625rem;
   transition: color var(--dur-fast) var(--ease-out);
 }
 .site-nav a:hover {
@@ -127,14 +132,14 @@ a {
   flex: 1;
 }
 .dock .meta .t {
-  font-size: 13px;
+  font-size: 0.875rem;
   color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .dock .meta .a {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--ink-2);
   letter-spacing: 0.04em;
 }
@@ -172,7 +177,7 @@ a {
 }
 .dock .tnum {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--ink-3);
   letter-spacing: 0.1em;
 }
@@ -231,7 +236,7 @@ a {
 }
 .np-min {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--ink-2);
   letter-spacing: 0.18em;
   cursor: pointer;
@@ -265,7 +270,7 @@ a {
   font-weight: 300;
   text-transform: uppercase;
   letter-spacing: 0.4em;
-  font-size: 34px;
+  font-size: 2.125rem;
   color: var(--ink);
   padding-left: 0.4em;
 }
@@ -273,7 +278,7 @@ a {
   font-family: 'IBM Plex Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.32em;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--ember);
   margin-top: 14px;
 }
@@ -307,7 +312,7 @@ a {
   display: flex;
   justify-content: space-between;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 10px;
+  font-size: 0.625rem;
   letter-spacing: 0.14em;
   color: var(--ink-3);
 }
@@ -358,7 +363,7 @@ a {
   font-family: 'IBM Plex Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.3em;
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--ink-3);
   margin-bottom: 26px;
 }
@@ -393,19 +398,19 @@ a {
   font-family: 'Cormorant Garamond', serif;
   text-transform: uppercase;
   letter-spacing: 0.16em;
-  font-size: 15px;
+  font-size: 1rem;
   color: var(--ink);
 }
 .np-qa {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 9px;
+  font-size: 0.625rem;
   letter-spacing: 0.14em;
   color: var(--ink-2);
 }
 .np-qn {
   margin-left: auto;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 9px;
+  font-size: 0.625rem;
   color: var(--ink-3);
 }
 .np-qrow.next {
@@ -417,7 +422,7 @@ a {
   right: 0;
   top: -2px;
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 8px;
+  font-size: 0.625rem;
   letter-spacing: 0.24em;
   color: var(--ember);
 }
@@ -441,7 +446,7 @@ a {
   font-family: 'IBM Plex Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.24em;
-  font-size: 9px;
+  font-size: 0.625rem;
   color: var(--ink-3);
 }
 .login-input {
@@ -451,7 +456,7 @@ a {
   padding: 14px 16px;
   color: var(--ink);
   font-family: 'Spectral', serif;
-  font-size: 16px;
+  font-size: 1rem;
   transition: border-color var(--dur-fast) var(--ease-out);
 }
 .login-input::placeholder {
@@ -474,7 +479,7 @@ a {
   font-family: 'IBM Plex Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.22em;
-  font-size: 11px;
+  font-size: 0.6875rem;
   cursor: pointer;
   transition: transform var(--dur-fast) var(--ease-out);
 }
@@ -488,7 +493,7 @@ a {
 .login-error {
   color: var(--ember-deep);
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.08em;
   margin-top: 4px;
 }
@@ -503,13 +508,13 @@ a {
   font-family: 'Cormorant Garamond', serif;
   text-transform: uppercase;
   letter-spacing: 0.28em;
-  font-size: 18px;
+  font-size: 1.125rem;
   color: var(--ember);
   margin-bottom: 12px;
 }
 .login-sent-s {
   color: var(--ink-2);
-  font-size: 15px;
+  font-size: 1rem;
   line-height: 1.6;
 }
 .login-textlink {
@@ -520,7 +525,7 @@ a {
   font-family: 'IBM Plex Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  font-size: 10px;
+  font-size: 0.625rem;
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 4px;
@@ -541,7 +546,7 @@ a {
   font-family: 'IBM Plex Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.24em;
-  font-size: 9px;
+  font-size: 0.625rem;
   color: var(--ink-3);
 }
 .ugc-input,
@@ -554,7 +559,7 @@ a {
   padding: 13px 15px;
   color: var(--ink);
   font-family: 'Spectral', serif;
-  font-size: 16px;
+  font-size: 1rem;
   transition: border-color var(--dur-fast) var(--ease-out);
 }
 .ugc-textarea {
@@ -581,13 +586,13 @@ a {
   font-family: 'IBM Plex Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--ink-2);
 }
 .ugc-file {
   color: var(--ink-3);
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.06em;
 }
 .ugc-file::file-selector-button {
@@ -600,7 +605,7 @@ a {
   font-family: 'IBM Plex Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.18em;
-  font-size: 10px;
+  font-size: 0.625rem;
   cursor: pointer;
   transition: all var(--dur-fast) var(--ease-out);
 }
@@ -629,7 +634,7 @@ a {
   font-family: 'IBM Plex Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.22em;
-  font-size: 11px;
+  font-size: 0.6875rem;
   cursor: pointer;
   transition: transform var(--dur-fast) var(--ease-out);
 }
@@ -648,7 +653,7 @@ a {
 .ugc-error {
   color: var(--ember-deep);
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.08em;
   margin-top: 4px;
 }
@@ -666,7 +671,7 @@ a {
   display: flex;
   gap: 12px;
   align-items: baseline;
-  font-size: 14px;
+  font-size: 0.9375rem;
   line-height: 1.6;
   color: var(--ink-2);
   cursor: pointer;
@@ -679,7 +684,7 @@ a {
   color: var(--ink);
 }
 .ugc-hint {
-  font-size: 10px;
+  font-size: 0.625rem;
   letter-spacing: 0.12em;
   color: var(--ink-3);
 }
@@ -704,7 +709,7 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 0.625rem;
   letter-spacing: 0.14em;
   color: var(--ink);
 }
@@ -719,13 +724,13 @@ a {
   font-family: 'Cormorant Garamond', serif;
   text-transform: uppercase;
   letter-spacing: 0.28em;
-  font-size: 18px;
+  font-size: 1.125rem;
   color: var(--ember);
   margin-bottom: 12px;
 }
 .ugc-success-s {
   color: var(--ink-2);
-  font-size: 15px;
+  font-size: 1rem;
   line-height: 1.6;
 }
 .ugc-success-s a {

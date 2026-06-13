@@ -187,7 +187,7 @@ body::after {
   font-family: 'IBM Plex Mono', monospace;
   text-transform: uppercase;
   letter-spacing: 0.34em;
-  font-size: 10px;
+  font-size: 0.625rem;
   color: var(--ink-3);
 }
 .mono {

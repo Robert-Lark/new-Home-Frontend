@@ -318,7 +318,7 @@ const displayName = profile?.display_name || user.email?.split('@')[0] || '';
     font-weight: 300;
     text-transform: uppercase;
     letter-spacing: 0.22em;
-    font-size: clamp(28px, 4vw, 44px);
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
     color: var(--ink);
     margin-top: 14px;
   }
@@ -331,7 +331,7 @@ const displayName = profile?.display_name || user.email?.split('@')[0] || '';
     text-decoration: none;
     text-transform: uppercase;
     letter-spacing: 0.2em;
-    font-size: 10px;
+    font-size: 0.625rem;
     transition: all var(--dur-fast) var(--ease-out);
   }
   .set-back:hover {
@@ -356,7 +356,7 @@ const displayName = profile?.display_name || user.email?.split('@')[0] || '';
     display: flex;
     gap: 12px;
     align-items: baseline;
-    font-size: 14px;
+    font-size: 0.9375rem;
     line-height: 1.6;
     color: var(--ink-2);
     cursor: pointer;
@@ -369,14 +369,14 @@ const displayName = profile?.display_name || user.email?.split('@')[0] || '';
     color: var(--ink);
   }
   .set-ok {
-    font-size: 11px;
+    font-size: 0.6875rem;
     letter-spacing: 0.08em;
     color: var(--fog-olive);
     margin-top: 4px;
   }
   .set-danger .set-warn {
     color: var(--ink-2);
-    font-size: 14px;
+    font-size: 0.9375rem;
     line-height: 1.7;
     margin-bottom: 18px;
   }

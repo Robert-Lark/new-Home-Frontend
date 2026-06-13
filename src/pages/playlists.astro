@@ -42,14 +42,14 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     font-weight: 300;
     text-transform: uppercase;
     letter-spacing: 0.22em;
-    font-size: clamp(28px, 4vw, 44px);
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
     color: var(--ink);
     margin: 14px 0 10px;
   }
   .pl-sub {
     color: var(--ink-2);
     font-style: italic;
-    font-size: 16px;
+    font-size: 1rem;
   }
 </style>
 
@@ -62,7 +62,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
   }
   .lib-note {
     color: var(--ink-2);
-    font-size: 16px;
+    font-size: 1rem;
     line-height: 1.6;
   }
   .lib-link {
@@ -72,7 +72,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
   .lib-empty {
     color: var(--ink-3);
     font-style: italic;
-    font-size: 15px;
+    font-size: 1rem;
     line-height: 1.6;
     list-style: none;
     padding: 8px 0;
@@ -85,7 +85,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     font-family: 'IBM Plex Mono', monospace;
     text-transform: uppercase;
     letter-spacing: 0.18em;
-    font-size: 10px;
+    font-size: 0.625rem;
     padding: 9px 16px;
     border-radius: 999px;
     cursor: pointer;
@@ -120,7 +120,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     background: none;
     color: var(--ember);
     cursor: pointer;
-    font-size: 11px;
+    font-size: 0.6875rem;
     line-height: 1;
     display: grid;
     place-items: center;
@@ -139,14 +139,14 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
   }
   .lib-item-t {
     color: var(--ink);
-    font-size: 15px;
+    font-size: 1rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .lib-item-a {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 9px;
+    font-size: 0.625rem;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--ink-3);
@@ -157,7 +157,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     border: none;
     color: var(--ink-3);
     cursor: pointer;
-    font-size: 12px;
+    font-size: 0.75rem;
     padding: 6px;
     transition: color var(--dur-fast) var(--ease-out);
   }
@@ -174,7 +174,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     border: none;
     color: var(--ink-3);
     cursor: pointer;
-    font-size: 8px;
+    font-size: 0.5rem;
     line-height: 1;
     padding: 1px 4px;
   }
@@ -200,7 +200,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     padding: 10px 14px;
     color: var(--ink);
     font-family: 'Spectral', serif;
-    font-size: 15px;
+    font-size: 1rem;
   }
   .lib-create-input:focus,
   .lib-rename-input:focus,
@@ -218,7 +218,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     font-family: 'IBM Plex Mono', monospace;
     text-transform: uppercase;
     letter-spacing: 0.18em;
-    font-size: 10px;
+    font-size: 0.625rem;
     cursor: pointer;
   }
   .lib-create-btn:disabled {
@@ -253,16 +253,16 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     font-family: 'Cormorant Garamond', serif;
     text-transform: uppercase;
     letter-spacing: 0.18em;
-    font-size: 18px;
+    font-size: 1.125rem;
     padding: 6px 0;
   }
   .lib-pl-caret {
     color: var(--ink-3);
-    font-size: 11px;
+    font-size: 0.6875rem;
   }
   .lib-pl-n {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
+    font-size: 0.625rem;
     letter-spacing: 0.12em;
     color: var(--ink-3);
   }
@@ -277,7 +277,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     font-family: 'IBM Plex Mono', monospace;
     text-transform: uppercase;
     letter-spacing: 0.14em;
-    font-size: 9px;
+    font-size: 0.625rem;
     padding: 6px 10px;
     border-radius: 999px;
     cursor: pointer;
@@ -322,7 +322,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     font-family: 'IBM Plex Mono', monospace;
     text-transform: uppercase;
     letter-spacing: 0.22em;
-    font-size: 9px;
+    font-size: 0.625rem;
     color: var(--ink-3);
     padding: 2px 4px 10px;
   }
@@ -355,7 +355,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     border-radius: 4px;
     display: grid;
     place-items: center;
-    font-size: 10px;
+    font-size: 0.625rem;
     color: var(--on-ember);
   }
   .ql-check.on {
@@ -364,20 +364,20 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
   }
   .ql-menu-name {
     flex: 1;
-    font-size: 14px;
+    font-size: 0.9375rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
   .ql-menu-n {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 9px;
+    font-size: 0.625rem;
     color: var(--ink-3);
   }
   .ql-menu-empty {
     color: var(--ink-3);
     font-style: italic;
-    font-size: 13px;
+    font-size: 0.875rem;
     padding: 6px;
   }
   .ql-menu-new {
@@ -388,7 +388,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     border-top: 1px solid var(--hairline-soft);
   }
   .ql-menu-new .ql-menu-input {
-    font-size: 13px;
+    font-size: 0.875rem;
     padding: 8px 10px;
   }
   .ql-menu-add {
@@ -399,7 +399,7 @@ const trackIndex = JSON.stringify(episodes.map(trackOf));
     border: none;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 1rem;
   }
   .ql-menu-add:disabled {
     opacity: 0.45;
