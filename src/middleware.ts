@@ -20,5 +20,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   } = await supabase.auth.getUser();
   context.locals.user = user;
 
-  return next();
+  // Mirror public/_headers (which only covers static routes) onto SSR responses.
+  // CSP itself rides on the <meta> in Base.astro, so it's not set here.
+  const response = await next();
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+  response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  return response;
 });

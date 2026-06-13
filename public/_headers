@@ -1,0 +1,13 @@
+# Security headers for static routes. The @astrojs/cloudflare adapter appends
+# its own `/_astro/* Cache-Control: immutable` rule below this at build time
+# (it only skips that if a matching rule already sets Cache-Control — we don't).
+# SSR (Worker-rendered) responses get the same headers from src/middleware.ts.
+#
+# CSP is delivered per-page via a <meta> in Base.astro (hash-based, ClientRouter
+# -safe) — not here — to keep one policy and avoid header/meta intersection.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+  # No `preload` — keeps HSTS reversible (preload is hard to undo).
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
