@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "NODE_EXTRA_CA_CERTS=.certs/ca.pem astro dev",
     "build": "NODE_EXTRA_CA_CERTS=.certs/ca.pem astro build",
-    "preview": "wrangler pages dev ./dist",
+    "preview": "NODE_EXTRA_CA_CERTS=.certs/ca.pem wrangler dev -c dist/server/wrangler.json",
     "check": "NODE_EXTRA_CA_CERTS=.certs/ca.pem astro check",
     "typecheck": "NODE_EXTRA_CA_CERTS=.certs/ca.pem astro check",
     "astro": "NODE_EXTRA_CA_CERTS=.certs/ca.pem astro"

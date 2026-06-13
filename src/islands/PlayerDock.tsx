@@ -38,6 +38,13 @@ function fmt(seconds: number): string {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
 }
 
+/** Neutralize url()-breaking characters before interpolating a cover into an
+ *  inline `background-image`. Covers are CDN/CMS URLs (no raw quotes/parens), so
+ *  this never alters a real value — it just closes the CSS-injection seam. */
+function cssUrl(u: string): string {
+  return u.replace(/["'()\\\s]/g, encodeURIComponent);
+}
+
 /** How often to persist progress while playing (throttles DB writes). */
 const WRITE_EVERY_SECONDS = 20;
 /** Only resume if the saved position is past this (avoids tiny jumps). */
@@ -249,7 +256,7 @@ export default function PlayerDock() {
       {/* ---- Expanded now-playing view ---- */}
       {expanded && track && (
         <div class="now-playing" role="dialog" aria-label="Now playing">
-          <div class="np-bg" style={track.cover ? `background-image:url('${track.cover}')` : ''}></div>
+          <div class="np-bg" style={track.cover ? `background-image:url("${cssUrl(track.cover)}")` : ''}></div>
           <div class="np-wrap">
             <div class="np-stage">
               <div class="np-top">

@@ -19,7 +19,12 @@ export function createSupabaseServerClient(ctx: { request: Request; cookies: Ast
     },
     setAll(cookiesToSet) {
       cookiesToSet.forEach(({ name, value, options }) => {
-        ctx.cookies.set(name, value, options as AstroCookieSetOptions);
+        ctx.cookies.set(name, value, {
+          ...(options as AstroCookieSetOptions),
+          // @supabase/ssr's defaults omit Secure. Force it in prod so the auth
+          // cookie can't ride a downgraded HTTP request; skipped in dev (http).
+          ...(import.meta.env.PROD ? { secure: true } : {}),
+        });
       });
     },
   };

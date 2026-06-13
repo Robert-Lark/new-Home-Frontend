@@ -7,8 +7,8 @@ Gatsby app in `../front-end/` (kept as salvage reference until cutover).
 
 | Concern              | Tech                                                          |
 | -------------------- | ------------------------------------------------------------- |
-| Framework            | **Astro 5** (static by default; SSR per-route via adapter)    |
-| Host                 | **Cloudflare Pages** (`@astrojs/cloudflare`)                  |
+| Framework            | **Astro 6** (static by default; SSR per-route via adapter)    |
+| Host                 | **Cloudflare Workers** (`@astrojs/cloudflare` v13; Pages support dropped) |
 | Islands              | **Preact** — audio player, favorites, upload form, post editor |
 | Navigation           | Astro `<ClientRouter />` + `transition:persist` (audio survives nav) |
 | Audio                | **Cloudflare R2** via `cdn.quietcast.art` (zero egress)       |
@@ -27,14 +27,14 @@ interactive islands only where needed.
 | `npm run dev`     | Dev server at `localhost:4321`                      |
 | `npm run check`   | `astro check` — type + diagnostics                  |
 | `npm run build`   | Production build to `./dist`                         |
-| `npm run preview` | Serve the built site via `wrangler pages dev`        |
+| `npm run preview` | Serve the built Worker locally via `wrangler dev` (run `build` first) |
 
 ## Environment
 
 Copy `.env.example` → `.env` and fill in. `PUBLIC_*` vars are inlined into the
 browser bundle (no secrets there). Env is typed + validated via Astro's
-`astro:env` (see `astro.config.mjs`). For deployed previews/prod, set the same
-vars as Pages environment variables in the Cloudflare dashboard; for local
+`astro:env` (see `astro.config.mjs`). For deployed previews/prod, set these as
+Worker environment variables / secrets in the Cloudflare dashboard; for local
 binding access (R2) use `.dev.vars`.
 
 ## Layout

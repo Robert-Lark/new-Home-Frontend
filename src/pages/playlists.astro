@@ -8,7 +8,9 @@ import PlaylistManager from '../islands/PlaylistManager';
 // home grid, so this route stays off the SSR auth path. We only render a track
 // index here so the island can resolve content_refs → playable Tracks.
 const episodes = await getEpisodes();
-const trackIndex = JSON.stringify(episodes.map(trackOf));
+// `<` keeps the JSON valid while ensuring a CMS title can never emit a
+// literal `</script>` that would close this inline tag early.
+const trackIndex = JSON.stringify(episodes.map(trackOf)).replace(/</g, '\\u003c');
 ---
 
 <Base title="Library" section="playlists">

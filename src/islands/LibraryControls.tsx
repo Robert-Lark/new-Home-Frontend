@@ -35,6 +35,11 @@ export default function LibraryControls() {
   const [newName, setNewName] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
+  // Mirror `open` into a ref so the delegated-listener effect can read the latest
+  // value without listing `open` as a dep — otherwise it tears down and re-adds
+  // all of its document/window listeners (and refetches favorites) on every
+  // popover open/close.
+  const openRef = useRef(false);
 
   const paintFavorites = useCallback(async () => {
     const favs = await fetchFavorites();
@@ -80,8 +85,12 @@ export default function LibraryControls() {
     await toggleFavorite(ref); // optimistic: emits FAVORITE_EVENT immediately
   }, []);
 
-  // Delegated clicks + recolor lifecycle. Re-runs across ClientRouter nav via
-  // the astro:page-load listener (matches ListenState).
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
+  // Delegated clicks + recolor lifecycle. Binds once on mount; re-runs across
+  // ClientRouter nav via the astro:page-load listener (matches ListenState).
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       const t = e.target as HTMLElement | null;
@@ -98,7 +107,7 @@ export default function LibraryControls() {
         return;
       }
       // Click outside an open popover closes it.
-      if (open && !t?.closest('.ql-menu')) closeMenu();
+      if (openRef.current && !t?.closest('.ql-menu')) closeMenu();
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && open) closeMenu();
@@ -113,7 +122,7 @@ export default function LibraryControls() {
         });
     };
     const onPageLoad = () => void paintFavorites();
-    const onScroll = () => open && closeMenu();
+    const onScroll = () => openRef.current && closeMenu();
 
     void paintFavorites();
     document.addEventListener('click', onClick);
@@ -128,7 +137,7 @@ export default function LibraryControls() {
       document.removeEventListener('astro:page-load', onPageLoad);
       window.removeEventListener('scroll', onScroll);
     };
-  }, [handleFav, openMenu, closeMenu, paintFavorites, open]);
+  }, [handleFav, openMenu, closeMenu, paintFavorites]);
 
   const onToggleMembership = useCallback(
     async (pl: Playlist) => {

@@ -24,12 +24,14 @@ export const GET: APIRoute = async ({ url, locals, redirect }) => {
   const type = url.searchParams.get('type') as EmailOtpType | null;
   const provider_error = url.searchParams.get('error_description') ?? url.searchParams.get('error');
 
-  console.log('[auth/confirm]', {
-    hasCode: !!code,
-    hasTokenHash: !!token_hash,
-    type,
-    provider_error,
-  });
+  if (import.meta.env.DEV) {
+    console.log('[auth/confirm]', {
+      hasCode: !!code,
+      hasTokenHash: !!token_hash,
+      type,
+      provider_error,
+    });
+  }
 
   if (provider_error) {
     return redirect(`/login?error=${encodeURIComponent(provider_error)}`);
