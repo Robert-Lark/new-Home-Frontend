@@ -1,0 +1,27 @@
+#:schema node_modules/wrangler/config-schema.json
+# Cloudflare WORKERS config for the Astro app.
+# @astrojs/cloudflare v13 removed Cloudflare Pages support: the adapter builds a
+# Worker (dist/server/index.mjs) with static assets in dist/client, and at build
+# time merges THIS file into dist/server/wrangler.json — adding the `main` entry
+# and the (reserved-in-Workers) `ASSETS` assets binding automatically.
+# Do NOT add `pages_build_output_dir`: it flags a Pages project, where the
+# `ASSETS` binding the adapter emits is reserved → "name 'ASSETS' is reserved in
+# Pages projects" and the build/deploy fails.
+name = "quietcast"
+compatibility_date = "2025-09-23"
+# Astro's Cloudflare adapter requires the Node.js compat layer for SSR routes.
+compatibility_flags = ["nodejs_compat"]
+
+# R2 binding — gives SSR routes / API endpoints direct access to the audio
+# bucket (e.g. minting presigned upload URLs in Phase 6) without S3 creds.
+# Public reads still go through cdn.quietcast.art (zero egress), NOT this binding.
+[[r2_buckets]]
+binding = "AUDIO"
+bucket_name = "quietcast-audio"
+
+# Secrets/bindings (Supabase keys, R2 S3 creds, Sanity token, ADMIN_EMAIL) are
+# set as Worker environment variables / secrets in the Cloudflare dashboard, and
+# in `.dev.vars` locally (gitignored). NOTE: the two client/public Supabase vars
+# (PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY) are REQUIRED AT BUILD — astro:env
+# validates + inlines them, so they must exist in the Cloudflare *build*
+# environment or `astro build` fails. See .env.example for the full list.

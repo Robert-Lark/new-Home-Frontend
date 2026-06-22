@@ -1,0 +1,255 @@
+---
+import Base from '../layouts/Base.astro';
+import ListenState from '../islands/ListenState';
+import { getEpisodes, type Episode } from '../lib/content';
+
+// Hsieh date-grid ledger, driven by real show dates from Sanity
+// (Episode.airDate: the `date` field, or doc-creation date for the imported
+// back catalog). Static HTML at build time; the ListenState island paints
+// per-user listen state on top via data-qc-ref/data-qc-state.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+const episodes = (await getEpisodes()).filter((e) => e.airDate);
+
+// "YYYY-MM-DD" → shows that day, newest cat first. Import-era docs can share
+// a day; the cell links to the newest and its tooltip lists them all (the
+// clusters dissolve as real air dates are backfilled in the studio).
+const byDay = new Map<string, Episode[]>();
+for (const e of episodes) {
+  byDay.set(e.airDate!, [...(byDay.get(e.airDate!) ?? []), e]);
+}
+for (const list of byDay.values()) list.sort((a, b) => b.cat - a.cat);
+
+// Continuous year range, newest first (a silent year still renders — the
+// emptiness is the point of the ledger).
+const showYears = episodes.map((e) => Number(e.airDate!.slice(0, 4)));
+const maxYear = Math.max(...showYears);
+const minYear = Math.min(...showYears);
+
+const latestSlug = episodes.length
+  ? episodes.reduce((a, b) => (b.cat > a.cat ? b : a)).slug
+  : null;
+
+const years = Array.from({ length: maxYear - minYear + 1 }, (_, i) => maxYear - i).map((yr) => {
+  let count = 0;
+  const months = MONTHS.map((label, mi) => {
+    const days = new Date(Date.UTC(yr, mi + 1, 0)).getUTCDate();
+    const cells = Array.from({ length: days }, (_, idx) => {
+      const day = idx + 1;
+      const key = `${yr}-${String(mi + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const shows = byDay.get(key) ?? [];
+      count += shows.length;
+      return { day, shows };
+    });
+    return { label, cells };
+  });
+  return { yr, count, months };
+});
+
+const totalShows = episodes.length;
+const totalTracks = episodes.reduce((n, e) => n + e.tracklist.length, 0);
+
+const cellLabel = (shows: Episode[]) =>
+  shows.map((s) => `${s.catLabel} · ${s.title} — ${s.artist}`).join(' / ');
+---
+
+<Base title="The Archive" section="archive">
+  <div class="head">
+    <h1>The Archive</h1>
+    <div class="meta mono">
+      {totalShows} transmissions<br />{minYear === maxYear ? maxYear : `${minYear} — ${maxYear}`}<br />{totalTracks} tracks indexed
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i style="border:1px solid var(--stone)"></i>recorded show</span>
+    <span><i style="background:var(--ember)"></i>latest transmission</span>
+    <span><i style="background:var(--surface-1)"></i>silence</span>
+  </div>
+
+  <div class="years">
+    {
+      years.map((y) => (
+        <div class="year">
+          <div class="ynum">
+            {y.yr}
+            <span class="c mono">{y.count} shows</span>
+          </div>
+          <div class="months">
+            {y.months.map((m) => (
+              <div class="mo">
+                <div class="ml">{m.label}</div>
+                {/* Show days are links carrying data-qc-ref; the ListenState
+                    island below paints data-qc-state on them. Silent days are
+                    inert spans with no ref, neutral for everyone. */}
+                <div class="dots">
+                  {m.cells.map((c) => {
+                    const first = c.shows[0];
+                    return first ? (
+                      <a
+                        href={`/show/${first.slug}`}
+                        class={first.slug === latestSlug ? 'live' : 'has'}
+                        data-qc-ref={first.slug}
+                        title={cellLabel(c.shows)}
+                        aria-label={`${cellLabel(c.shows)}, ${m.label} ${c.day} ${y.yr}`}
+                      >
+                        {c.day}
+                      </a>
+                    ) : (
+                      <span></span>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))
+    }
+  </div>
+
+  {/* Recolors any [data-qc-ref] cell by the signed-in user's listen state.
+      Neutral for logged-out visitors. */}
+  <ListenState client:idle />
+</Base>
+
+<style>
+  .head {
+    padding: 50px 56px 10px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+  .head h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    font-size: clamp(1.875rem, 5vw, 2.875rem);
+    padding-left: 0.3em;
+  }
+  .head .meta {
+    font-size: 0.625rem;
+    letter-spacing: 0.2em;
+    color: var(--ink-3);
+    text-align: right;
+    line-height: 1.8;
+    text-transform: uppercase;
+  }
+  .legend {
+    display: flex;
+    gap: 26px;
+    padding: 14px 56px 30px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.625rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .legend i {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-right: 7px;
+    vertical-align: middle;
+  }
+  .years {
+    padding: 0 56px 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 46px;
+  }
+  .year {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 34px;
+    align-items: start;
+  }
+  .ynum {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: 5rem;
+    line-height: 0.8;
+    -webkit-text-stroke: 1px var(--ink-3);
+    color: transparent;
+  }
+  .ynum .c {
+    display: block;
+    -webkit-text-stroke: 0;
+    color: var(--ink-3);
+    font-size: 0.625rem;
+    letter-spacing: 0.2em;
+    margin-top: 14px;
+  }
+  .months {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 26px 30px;
+  }
+  .ml {
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    font-size: 0.625rem;
+    color: var(--ink-2);
+    margin-bottom: 9px;
+    border-bottom: 1px solid var(--hairline-soft);
+    padding-bottom: 6px;
+  }
+  .dots {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 5px;
+  }
+  .dots span,
+  .dots a {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.5rem;
+    display: grid;
+    place-items: center;
+    color: transparent;
+    background: var(--surface-1);
+    text-decoration: none;
+  }
+  .dots .has {
+    background: transparent;
+    border: 1px solid var(--stone);
+    color: var(--ink-2);
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .dots .has:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+    transform: scale(1.15);
+  }
+  /* Per-user listen state painted by the ListenState island:
+     in-progress rings ember, done fills faint ember. */
+  .dots [data-qc-state='in-progress'] {
+    border: 1px solid var(--ember);
+    color: var(--ember);
+  }
+  .dots [data-qc-state='done'] {
+    background: color-mix(in srgb, var(--ember) 22%, transparent);
+    border: 1px solid var(--ember);
+    color: var(--ink);
+  }
+  /* Last so the one warm accent always wins, whatever the listen state. */
+  .dots .live {
+    background: var(--ember);
+    border-color: var(--ember);
+    color: var(--on-ember);
+  }
+  @media (max-width: 760px) {
+    .year {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    .months {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

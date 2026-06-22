@@ -1,0 +1,213 @@
+---
+export const prerender = false;
+import Base from '../../layouts/Base.astro';
+import ProfilePage from '../../components/ProfilePage.astro';
+import { MAX_CONNECTIONS } from '../../lib/connections';
+import { getEpisodes } from '../../lib/content';
+import {
+  buildActivity,
+  getConnections,
+  getProfileDetails,
+  getProfileRow,
+  getSiteNews,
+  getUserContent,
+  resolveTrack,
+} from '../../lib/profile';
+import {
+  getWallComments,
+  handleWallAction,
+  resolveWallEntries,
+  type WallActionResult,
+} from '../../lib/wall';
+
+/**
+ * Public profile view — what anyone (signed in or not) sees of a listener who
+ * has made their page public. Owners land here too, as a "preview as visitor".
+ * RLS already hides private rows (favorites, listens, non-public details);
+ * the publishedOnly content filter keeps the owner's own drafts out of the
+ * preview as well.
+ */
+const id = Astro.params.id!;
+const supabase = Astro.locals.supabase;
+const viewer = Astro.locals.user;
+const own = viewer?.id === id;
+
+/**
+ * Pin this listener to the viewer's own grid: a snapshot connection row —
+ * display name, avatar, and the /u/<id> link are copied at pin time (Rob's
+ * call, 2026-06-12), so renames/avatar changes don't propagate, and the R2
+ * cleanup pass must treat connections.image_url as live references.
+ * Unpinning is the dashboard's existing remove-connection form.
+ */
+async function pinListener(): Promise<{ ok: boolean; message: string }> {
+  if (!viewer) return { ok: false, message: 'Sign in to pin listeners.' };
+  if (viewer.id === id) return { ok: false, message: 'You can’t pin yourself.' };
+  const [target, targetDetails, mine] = await Promise.all([
+    getProfileRow(supabase, id),
+    getProfileDetails(supabase, id),
+    getConnections(supabase, viewer.id),
+  ]);
+  // RLS hides private profile_details from everyone but their owner, so this
+  // also rejects crafted POSTs against profiles that aren't public.
+  if (!target || !targetDetails?.is_public) return { ok: false, message: 'This page is private.' };
+  if (mine.length >= MAX_CONNECTIONS)
+    return { ok: false, message: 'Your rotation is full — unpin something to make room.' };
+  const name = target.display_name || 'A listener';
+  if (mine.some((c) => c.link_url === `/u/${id}` || c.name === name))
+    return { ok: false, message: 'Already in your rotation.' };
+  const { error } = await supabase.from('connections').insert({
+    user_id: viewer.id,
+    kind: 'listener',
+    name,
+    image_url: target.avatar_url,
+    link_url: `/u/${id}`,
+    position: Math.max(0, ...mine.map((c) => c.position)) + 1,
+  });
+  if (error) return { ok: false, message: 'Could not pin — has the 0003 migration run?' };
+  return { ok: true, message: 'Pinned.' };
+}
+
+// Wall posts/deletes/reports and listener pins are the page's forms; both go
+// through the same action dispatch. Successes redirect (PRG, like the
+// dashboard grid); failures render inline (like report.ts).
+let wallResult: WallActionResult | null = null;
+let pinResult: { ok: boolean; message: string } | null = null;
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  wallResult = await handleWallAction(form, viewer, supabase, id);
+  if (wallResult?.ok) return Astro.redirect(`/u/${id}#wall`);
+  if (!wallResult && form.get('action') === 'pin-listener') {
+    pinResult = await pinListener();
+    if (pinResult.ok) return Astro.redirect(`/u/${id}`);
+  }
+}
+
+const profile = await getProfileRow(supabase, id);
+const details = profile ? await getProfileDetails(supabase, id) : null;
+const visible = Boolean(profile && (details?.is_public || own));
+
+if (!visible) Astro.response.status = 404;
+
+const episodes = visible ? await getEpisodes() : [];
+const epByRef = new Map(episodes.map((e) => [e.slug, e]));
+
+const [connections, content, news, wallComments] = visible
+  ? await Promise.all([
+      getConnections(supabase, id),
+      getUserContent(supabase, id, true),
+      getSiteNews(supabase, episodes),
+      getWallComments(supabase, id),
+    ])
+  : [[], { mixes: [], posts: [], lists: [], albums: [] }, [], []];
+
+const wall = await resolveWallEntries(supabase, wallComments);
+const activity = buildActivity({ content, episodesByRef: epByRef, connections, wallNotes: wall });
+
+// "Pin to my grid" shows for signed-in visitors who aren't the owner, haven't
+// pinned this listener yet, and have grid room (pinListener re-checks it all).
+const mine = viewer && !own && visible ? await getConnections(supabase, viewer.id) : [];
+const alreadyPinned = mine.some((c) => c.kind === 'listener' && c.link_url === `/u/${id}`);
+const pinState: 'available' | 'pinned' | null =
+  !viewer || own || !visible
+    ? null
+    : alreadyPinned
+      ? 'pinned'
+      : mine.length < MAX_CONNECTIONS
+        ? 'available'
+        : null;
+
+const song = details?.profile_song_ref
+  ? await resolveTrack(supabase, details.profile_song_ref, epByRef)
+  : null;
+
+const displayName = profile?.display_name || 'A listener';
+const memberSince = profile?.created_at
+  ? new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(new Date(profile.created_at))
+  : null;
+---
+
+<Base
+  title={visible ? displayName : 'Private signal'}
+  description={visible ? `${displayName} on Quiet Cast.` : undefined}
+  section="community"
+>
+  {
+    visible ? (
+      <ProfilePage
+        editable={false}
+        profileId={id}
+        displayName={displayName}
+        avatarUrl={profile?.avatar_url ?? null}
+        memberSince={memberSince}
+        statusLine={details?.status_line}
+        bio={details?.bio}
+        isPublic={details?.is_public ?? false}
+        song={song}
+        connections={connections}
+        pinState={pinState}
+        pinResult={pinResult}
+        activity={activity}
+        news={news}
+        wall={wall}
+        wallOpen={details?.is_public ?? false}
+        viewerId={viewer?.id ?? null}
+        wallResult={wallResult}
+        previewBanner={
+          own
+            ? details?.is_public
+              ? 'Preview — this is how visitors see your page.'
+              : 'Preview — your page is private, so only you can see this. Make it public in Settings.'
+            : undefined
+        }
+      />
+    ) : (
+      <section class="private">
+        <span class="eyebrow">No signal</span>
+        <h1>This page is private</h1>
+        <p>Either this listener keeps their profile to themselves, or there's nothing broadcasting here.</p>
+        <a href="/community">Back to the community</a>
+      </section>
+    )
+  }
+</Base>
+
+<style>
+  .private {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 140px 48px 220px;
+    text-align: center;
+  }
+  .private h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: clamp(1.625rem, 4vw, 2.375rem);
+    color: var(--ink);
+    margin: 16px 0 14px;
+  }
+  .private p {
+    color: var(--ink-2);
+    font-size: 1rem;
+    line-height: 1.7;
+    margin-bottom: 30px;
+  }
+  .private a {
+    display: inline-block;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 11px 18px;
+    color: var(--ink-2);
+    text-decoration: none;
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.625rem;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .private a:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+</style>

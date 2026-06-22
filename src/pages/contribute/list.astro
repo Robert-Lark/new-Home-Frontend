@@ -1,0 +1,224 @@
+---
+export const prerender = false;
+import Base from '../../layouts/Base.astro';
+import { LIST_ITEM_TYPES, MAX_CREATED_PER_DAY } from '../../lib/ugc';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/login');
+const supabase = Astro.locals.supabase;
+
+// HTML-first: plain form POST. The only client JS is a vanilla "add another
+// row" enhancer; the server renders enough rows that it works without it.
+const INITIAL_ROWS = 5;
+
+let errorMsg: string | null = null;
+let title = '';
+let description = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  title = String(form.get('title') ?? '').trim();
+  description = String(form.get('description') ?? '').trim();
+
+  const types = form.getAll('item_type').map(String);
+  const titles = form.getAll('item_title').map((v) => String(v).trim());
+  const notes = form.getAll('item_note').map((v) => String(v).trim());
+  const urls = form.getAll('item_url').map((v) => String(v).trim());
+
+  const items: Array<{ item_type: string; title: string; note: string | null; url: string | null }> = [];
+  let badUrl: string | null = null;
+  for (let i = 0; i < titles.length; i++) {
+    const t = titles[i];
+    if (!t) continue; // blank row
+    const url = urls[i] || null;
+    if (url && !/^https?:\/\//.test(url)) badUrl = url;
+    items.push({
+      item_type: (LIST_ITEM_TYPES as readonly string[]).includes(types[i] ?? '') ? types[i]! : 'other',
+      title: t.slice(0, 200),
+      note: notes[i]?.slice(0, 500) || null,
+      url,
+    });
+  }
+
+  if (!title) {
+    errorMsg = 'Give the list a title.';
+  } else if (title.length > 160) {
+    errorMsg = 'Keep the title under 160 characters.';
+  } else if (items.length === 0) {
+    errorMsg = 'Add at least one entry.';
+  } else if (badUrl) {
+    errorMsg = 'Links must start with http:// or https://.';
+  } else {
+    // Abuse brake: 24h creation cap. Explicit user filter — the select
+    // policy is own-or-published, so an unfiltered count sees everyone.
+    const { count } = await supabase
+      .from('lists')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', new Date(Date.now() - 24 * 3600 * 1000).toISOString());
+    if ((count ?? 0) >= MAX_CREATED_PER_DAY) {
+      errorMsg = 'Daily cap reached — twenty new pieces in 24 hours. Come back tomorrow.';
+    } else {
+      const status = form.get('visibility') === 'private' ? 'private' : 'published';
+      const { data: list, error } = await supabase
+        .from('lists')
+        .insert({ user_id: user.id, title, description: description || null, status })
+        .select('id')
+        .single();
+      if (error || !list) {
+        errorMsg = `Couldn't save the list: ${error?.message ?? 'unknown error'}.`;
+      } else {
+        const { error: itemsError } = await supabase
+          .from('list_items')
+          .insert(items.map((it, i) => ({ ...it, list_id: list.id, position: i })));
+        if (itemsError) {
+          errorMsg = `The list saved but its entries failed: ${itemsError.message}.`;
+        } else {
+          return Astro.redirect(`/lists/${list.id}`, 303);
+        }
+      }
+    }
+  }
+}
+---
+
+<Base title="Make a list" section="community">
+  <section class="page">
+    <span class="eyebrow"><a href="/contribute">Contribute</a> · List</span>
+    <h1>Make a list</h1>
+    <p class="intro">
+      Favorite records, artists, labels, shows — whatever the canon is tonight. Public lists go
+      straight to the community shelf; private ones stay yours until you flip them.
+    </p>
+
+    <form class="ugc-form" method="POST" data-astro-reload>
+      <label class="ugc-label" for="list-title">Title</label>
+      <input
+        id="list-title"
+        class="ugc-input"
+        type="text"
+        name="title"
+        required
+        maxlength="160"
+        placeholder="Ten records for an empty highway"
+        value={title}
+      />
+
+      <label class="ugc-label" for="list-desc">Description · optional</label>
+      <textarea
+        id="list-desc"
+        class="ugc-textarea"
+        name="description"
+        rows="3"
+        maxlength="2000">{description}</textarea
+      >
+
+      <span class="ugc-label">Entries · blank rows are skipped</span>
+      <div id="list-rows" class="rows">
+        {
+          Array.from({ length: INITIAL_ROWS }).map(() => (
+            <div class="item-row">
+              <select class="ugc-select" name="item_type" aria-label="Entry type">
+                {LIST_ITEM_TYPES.map((t) => (
+                  <option value={t}>{t}</option>
+                ))}
+              </select>
+              <input class="ugc-input" type="text" name="item_title" maxlength="200" placeholder="Title" aria-label="Entry title" />
+              <input class="ugc-input" type="text" name="item_note" maxlength="500" placeholder="Note · optional" aria-label="Entry note" />
+              <input class="ugc-input" type="url" name="item_url" placeholder="https:// · optional" aria-label="Entry link" />
+            </div>
+          ))
+        }
+      </div>
+      <template id="list-row-template">
+        <div class="item-row">
+          <select class="ugc-select" name="item_type" aria-label="Entry type">
+            {LIST_ITEM_TYPES.map((t) => <option value={t}>{t}</option>)}
+          </select>
+          <input class="ugc-input" type="text" name="item_title" maxlength="200" placeholder="Title" aria-label="Entry title" />
+          <input class="ugc-input" type="text" name="item_note" maxlength="500" placeholder="Note · optional" aria-label="Entry note" />
+          <input class="ugc-input" type="url" name="item_url" placeholder="https:// · optional" aria-label="Entry link" />
+        </div>
+      </template>
+      <button id="list-add-row" class="ugc-submit ghost" type="button" hidden>+ Another entry</button>
+
+      <fieldset class="ugc-vis">
+        <legend class="ugc-label">Visibility</legend>
+        <label>
+          <input type="radio" name="visibility" value="published" checked />
+          <span><b>Public</b> — on the community shelf and your profile.</span>
+        </label>
+        <label>
+          <input type="radio" name="visibility" value="private" />
+          <span><b>Private</b> — only you can see it. Flip it later from the list's page.</span>
+        </label>
+      </fieldset>
+
+      <button class="ugc-submit" type="submit">Make the list</button>
+      {errorMsg && <p class="ugc-error">{errorMsg}</p>}
+    </form>
+  </section>
+</Base>
+
+<script>
+  // Progressive enhancement: reveal the add-row button only when JS runs.
+  // Bound on astro:page-load so it also works after ClientRouter swaps.
+  document.addEventListener('astro:page-load', () => {
+    const btn = document.getElementById('list-add-row');
+    const rows = document.getElementById('list-rows');
+    const tpl = document.getElementById('list-row-template') as HTMLTemplateElement | null;
+    if (!btn || !rows || !tpl) return;
+    btn.hidden = false;
+    btn.addEventListener('click', () => {
+      rows.append(tpl.content.cloneNode(true));
+    });
+  });
+</script>
+
+<style>
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 80px 48px 220px;
+  }
+  .eyebrow a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .eyebrow a:hover {
+    color: var(--ember);
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    color: var(--ink);
+    margin: 14px 0 12px;
+  }
+  .intro {
+    color: var(--ink-2);
+    font-style: italic;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 38px;
+  }
+  .rows {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .item-row {
+    display: grid;
+    grid-template-columns: 110px 1.4fr 1.2fr 1fr;
+    gap: 10px;
+  }
+  @media (max-width: 720px) {
+    .item-row {
+      grid-template-columns: 1fr;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--hairline-soft);
+    }
+  }
+</style>

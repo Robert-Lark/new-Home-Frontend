@@ -1,0 +1,217 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import PlayerDock from '../islands/PlayerDock';
+import '../styles/tokens.css';
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Marks the active nav item. */
+  section?: 'listen' | 'archive' | 'interviews' | 'community' | 'playlists' | 'about' | 'account';
+  /** The signed-in user's saved theme, on pages that loaded profile_details
+      (dashboard/settings). Authoritative when present: the pin script
+      re-seeds localStorage from it, so a fresh device picks up the saved
+      preference on first sign-in. */
+  theme?: 'dark' | 'light' | null;
+}
+
+const {
+  title = 'Quiet Cast',
+  description = 'Mixes & interviews from the edge of the signal.',
+  section = 'listen',
+  theme = null,
+} = Astro.props;
+
+const nav = [
+  { href: '/', label: 'Listen', key: 'listen' },
+  { href: '/archive', label: 'Archive', key: 'archive' },
+  { href: '/interviews', label: 'Interviews', key: 'interviews' },
+  { href: '/community', label: 'Community', key: 'community' },
+  { href: '/playlists', label: 'Library', key: 'playlists' },
+  { href: '/about', label: 'About', key: 'about' },
+  { href: '/dashboard', label: 'Account', key: 'account' },
+] as const;
+
+/**
+ * Content-Security-Policy — XSS hardening, production only.
+ *
+ * Astro's built-in `security.csp` can't be used here: it emits a *per-page*
+ * hash set that the <ClientRouter /> breaks on soft-navigation (page B's inline
+ * scripts run under page A's committed policy), and it generates nothing in dev.
+ * So we ship one policy — the UNION of every executable inline-script hash
+ * across all pages — as a <meta> in this shared <head>. Because it's identical
+ * on every page, any document swapped in by the ClientRouter already satisfies
+ * the committed policy. Gated to PROD so dev/HMR (which inlines different
+ * scripts) is never blocked.
+ *
+ * The per-episode queue is a <script type="application/json"> data block, which
+ * `script-src` does NOT govern — so it needs no hash even though it varies.
+ *
+ * Regenerate after editing the inline scripts below OR upgrading astro:
+ *   npm run build && node scripts/csp-hashes.mjs   (prints the set + flags drift)
+ */
+const CSP_INLINE_SCRIPT_HASHES = [
+  "'sha256-7givRStS63oQCpshDReK3RyhPdrz9f9ucfIAxwpiWiI='", // theme pin (this file)
+  "'sha256-oO/6LqDIsv88tvMeQ/sy9W8jHimmaGeQWNh1rluijTU='", // nav toggle (this file)
+  "'sha256-SaCkFfPruIdTXT8/97JArQmGxiJAL2o4bBDvSgJ5y3Q='", // astro <astro-island> runtime
+  "'sha256-QzWFZi+FLIx23tnm9SBU4aEgx4x8DsuASP07mfqol/c='", // astro client:load loader
+  "'sha256-BF0290pkb3jxQsE7z00xR8Imp8X34FLC88L0lkMnrGw='", // astro client:visible loader
+  "'sha256-eIXWvAmxkr251LJZkjniEK5LcPF3NkapbJepohwYRIc='", // astro client:only loader
+  "'sha256-rHCCeqMKDWW4vx4Gvez9VFyjOygNGLPSARYSeKxmPN8='", // /interviews page module
+];
+const csp = [
+  `script-src 'self' ${CSP_INLINE_SCRIPT_HASHES.join(' ')}`,
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "img-src 'self' data: blob: https://cdn.sanity.io https://cdn.quietcast.art",
+  "font-src 'self' https://fonts.gstatic.com",
+  "media-src https://cdn.sanity.io https://cdn.quietcast.art",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.r2.cloudflarestorage.com https://*.apicdn.sanity.io https://*.api.sanity.io",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'self'",
+].join('; ');
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    {/* CSP first (after charset), so it governs the inline scripts below. */}
+    {import.meta.env.PROD && <meta http-equiv="content-security-policy" content={csp} />}
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title === 'Quiet Cast' ? title : `${title} — Quiet Cast`}</title>
+    <meta name="description" content={description} />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <!-- Pre-paint theme pin. Dark is the house default; light is an explicit
+         stored choice ([data-theme='light'] override block in tokens.css).
+         Inline and synchronous on purpose — it must run before first paint.
+         Most pages are prerendered static, so the theme can never be
+         server-rendered; the ClientRouter swaps documents, so astro:after-swap
+         re-applies it (reading the swapped-in pin for a server theme). -->
+    <script is:inline data-qc-theme-pin data-server-theme={theme ?? ''}>
+      (() => {
+        const apply = (t) => {
+          const theme = t === 'light' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', theme);
+          const meta = document.querySelector('meta[name="color-scheme"]');
+          if (meta) meta.setAttribute('content', theme);
+        };
+        const resolve = () => {
+          const pin = document.querySelector('script[data-qc-theme-pin]');
+          const server = pin?.getAttribute('data-server-theme');
+          try {
+            if (server === 'light' || server === 'dark') {
+              localStorage.setItem('qc-theme', server);
+              return server;
+            }
+            return localStorage.getItem('qc-theme');
+          } catch {
+            return server || 'dark'; // storage blocked — stay dark
+          }
+        };
+        apply(resolve());
+        if (!window.qcThemePinned) {
+          window.qcThemePinned = true;
+          document.addEventListener('astro:after-swap', () => apply(resolve()));
+        }
+      })();
+    </script>
+
+    <!-- Direction A typeface stack: Cormorant Garamond (display caps),
+         Spectral (body serif), IBM Plex Mono (numbers/labels). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Spectral:ital,wght@0,300;0,400;1,300&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Same-document client router: keeps the audio dock (transition:persist)
+         alive across navigations so playback never stops. Auto-disables
+         animation under prefers-reduced-motion. -->
+    <ClientRouter />
+  </head>
+  <body>
+    <div class="fog" transition:persist></div>
+
+    <header class="site-header">
+      <a href="/" class="brand">Quiet&nbsp;Cast</a>
+      <button
+        type="button"
+        class="nav-toggle"
+        aria-label="Menu"
+        aria-controls="site-nav"
+        aria-expanded="false"
+        data-qc-nav-toggle
+      >
+        <span class="nav-toggle-bars"></span>
+      </button>
+      <nav class="site-nav" id="site-nav" aria-label="Primary">
+        {
+          nav.map((item) => (
+            <a href={item.href} aria-current={section === item.key ? 'page' : undefined}>
+              {item.label}
+            </a>
+          ))
+        }
+      </nav>
+    </header>
+
+    {/* Mobile nav disclosure. The full row only fits above ~1000px (brand +
+        7 tracked-caps links); below that the nav collapses to this toggle.
+        Inline + delegated on document so it survives the ClientRouter DOM
+        swap without re-binding — same idiom as the theme pin above. */}
+    <script is:inline data-qc-nav>
+      (() => {
+        if (window.qcNavInit) return;
+        window.qcNavInit = true;
+        const SEL = '[data-qc-nav-toggle]';
+        const openBtn = () => document.querySelector(SEL + '[aria-expanded="true"]');
+        const set = (btn, open) => btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+        document.addEventListener('click', (e) => {
+          const btn = e.target.closest(SEL);
+          if (btn) {
+            set(btn, btn.getAttribute('aria-expanded') !== 'true');
+            return;
+          }
+          const open = openBtn();
+          if (!open) return;
+          // A link closes the panel (then ClientRouter navigates); so does
+          // any click outside the panel.
+          if (e.target.closest('.site-nav a') || !e.target.closest('.site-nav')) {
+            set(open, false);
+          }
+        });
+
+        // Escape closes and returns focus to the toggle.
+        document.addEventListener('keydown', (e) => {
+          if (e.key !== 'Escape') return;
+          const open = openBtn();
+          if (open) {
+            set(open, false);
+            open.focus();
+          }
+        });
+
+        // Belt-and-suspenders: collapse before a client-side page swap.
+        document.addEventListener('astro:before-swap', () => {
+          const open = openBtn();
+          if (open) set(open, false);
+        });
+      })();
+    </script>
+
+    <main id="main-content">
+      <slot />
+    </main>
+
+    {/* Persistent audio player. The island owns the <audio> element and a
+        delegated [data-qc-play] click listener; transition:persist keeps it —
+        and the playing audio — alive across client-side navigations. */}
+    <PlayerDock client:load transition:persist="player-dock" />
+  </body>
+</html>

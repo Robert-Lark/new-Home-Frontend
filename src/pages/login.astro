@@ -1,0 +1,62 @@
+---
+export const prerender = false;
+import Base from '../layouts/Base.astro';
+import LoginForm from '../islands/LoginForm';
+
+// Already signed in? Skip straight to the dashboard.
+if (Astro.locals.user) return Astro.redirect('/dashboard');
+
+const rawError = Astro.url.searchParams.get('error');
+const errorMsg = rawError
+  ? rawError === 'link' || rawError === 'no-token'
+    ? 'That link was invalid or expired — request a fresh one below.'
+    : rawError
+  : null;
+---
+
+<Base title="Log in or sign up" section="account">
+  <section class="login">
+    <span class="eyebrow">Log in / Sign up</span>
+    <h1>Quiet Cast</h1>
+    <p class="login-intro">
+      Log in or create your account with just your email — we'll send a one-time link. No
+      password to remember.
+    </p>
+    {errorMsg && <p class="login-error">{errorMsg}</p>}
+    <LoginForm client:load />
+    <p class="login-foot mono">Returning? The link logs you in. New here? It creates your account.</p>
+  </section>
+</Base>
+
+<style>
+  .login {
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 120px 32px 220px;
+    text-align: center;
+  }
+  .login h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.5em;
+    font-size: clamp(1.5rem, 4vw, 2.125rem);
+    color: var(--ink);
+    margin: 22px 0 18px;
+    padding-left: 0.5em;
+  }
+  .login-intro {
+    color: var(--ink-2);
+    font-style: italic;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 30px;
+  }
+  .login-foot {
+    margin-top: 26px;
+    font-size: 0.625rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+</style>

@@ -1,0 +1,393 @@
+---
+export const prerender = false;
+import Base from '../layouts/Base.astro';
+import { getEpisodes } from '../lib/content';
+import { createSupabaseAdminClient } from '../lib/supabase-admin';
+import { IMAGE_TYPES, IMAGE_MAX_BYTES, cdnUrl } from '../lib/ugc';
+import { presignR2Put, r2Configured } from '../lib/r2';
+import { getProfileDetails, getProfileRow, safeRows } from '../lib/profile';
+
+/**
+ * Account settings — the profile's admin room. Plain HTML forms posting back
+ * to this page (one `action` field per form, same pattern as the report
+ * forms); results render inline. Writes go through RLS except account
+ * deletion, which needs the service-role client.
+ */
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/login');
+const supabase = Astro.locals.supabase;
+
+const episodes = await getEpisodes();
+const epByRef = new Map(episodes.map((e) => [e.slug, e]));
+
+// Published only: a private mix as the profile song would leak private
+// audio on a public page.
+const myMixes = await safeRows<{ id: string; title: string }>(
+  supabase
+    .from('user_uploads')
+    .select('id, title')
+    .eq('user_id', user.id)
+    .eq('status', 'published')
+    .order('created_at', { ascending: false }),
+);
+const myMixIds = new Set(myMixes.map((m) => m.id));
+
+let result: { ok: boolean; scope: string; message: string } | null = null;
+
+async function upsertDetails(fields: Record<string, unknown>): Promise<boolean> {
+  const { error } = await supabase
+    .from('profile_details')
+    .upsert({ id: user!.id, ...fields, updated_at: new Date().toISOString() });
+  return !error;
+}
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const action = form.get('action');
+
+  if (action === 'save-profile') {
+    const displayName = String(form.get('display_name') ?? '').trim().slice(0, 60);
+    const statusLine = String(form.get('status_line') ?? '').trim().slice(0, 140);
+    const bio = String(form.get('bio') ?? '').trim().slice(0, 2000);
+    const songRef = String(form.get('profile_song_ref') ?? '').trim();
+    if (!displayName) {
+      result = { ok: false, scope: 'profile', message: 'A display name is required.' };
+    } else if (songRef && !epByRef.has(songRef) && !myMixIds.has(songRef)) {
+      result = { ok: false, scope: 'profile', message: 'That profile signal is not available.' };
+    } else {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ display_name: displayName })
+        .eq('id', user.id);
+      const ok =
+        !error &&
+        (await upsertDetails({
+          status_line: statusLine || null,
+          bio: bio || null,
+          profile_song_ref: songRef || null,
+        }));
+      result = ok
+        ? { ok: true, scope: 'profile', message: 'Profile saved.' }
+        : { ok: false, scope: 'profile', message: 'Could not save — has the 0003 migration run?' };
+    }
+  } else if (action === 'save-avatar') {
+    const file = form.get('avatar');
+    if (!(file instanceof File) || file.size === 0) {
+      result = { ok: false, scope: 'avatar', message: 'Choose an image first.' };
+    } else if (!IMAGE_TYPES[file.type]) {
+      result = { ok: false, scope: 'avatar', message: 'Use a JPG, PNG, or WebP image.' };
+    } else if (file.size > IMAGE_MAX_BYTES) {
+      result = {
+        ok: false,
+        scope: 'avatar',
+        message: `Too large — the limit is ${Math.floor(IMAGE_MAX_BYTES / (1024 * 1024))}MB.`,
+      };
+    } else if (!r2Configured()) {
+      result = { ok: false, scope: 'avatar', message: 'Uploads are not configured on this deployment yet.' };
+    } else {
+      // Avatars are small, so the bytes may transit this route (unlike mixes,
+      // which presign for direct browser→R2 PUTs). Replaced avatars leave an
+      // orphaned object behind — acceptable until an R2 cleanup pass exists.
+      const key = `user/${user.id}/avatar/${crypto.randomUUID()}.${IMAGE_TYPES[file.type]}`;
+      const put = await fetch(await presignR2Put(key), {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: await file.arrayBuffer(),
+      });
+      if (!put.ok) {
+        result = { ok: false, scope: 'avatar', message: 'Upload failed — try again.' };
+      } else {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ avatar_url: cdnUrl(key) })
+          .eq('id', user.id);
+        result = error
+          ? { ok: false, scope: 'avatar', message: 'Upload succeeded but saving the profile failed.' }
+          : { ok: true, scope: 'avatar', message: 'Profile picture updated.' };
+      }
+    }
+  } else if (action === 'save-privacy') {
+    const ok = await upsertDetails({ is_public: form.get('visibility') === 'public' });
+    result = ok
+      ? { ok: true, scope: 'privacy', message: 'Visibility saved.' }
+      : { ok: false, scope: 'privacy', message: 'Could not save — has the 0003 migration run?' };
+  } else if (action === 'save-prefs') {
+    const theme = form.get('theme') === 'light' ? 'light' : 'dark';
+    const ok = await upsertDetails({ theme });
+    result = ok
+      ? { ok: true, scope: 'prefs', message: 'Preference saved.' }
+      : { ok: false, scope: 'prefs', message: 'Could not save — has the 0003 migration run?' };
+  } else if (action === 'delete-account') {
+    if (String(form.get('confirm') ?? '') !== 'DELETE') {
+      result = { ok: false, scope: 'delete', message: 'Type DELETE (all caps) to confirm.' };
+    } else {
+      try {
+        // Service-role: auth.users rows aren't deletable under RLS. Every
+        // user table cascades from auth.users; R2 objects under user/<uid>/
+        // are left for a manual cleanup pass (no delete helper in r2.ts yet).
+        const admin = createSupabaseAdminClient();
+        const { error } = await admin.auth.admin.deleteUser(user.id);
+        if (error) throw error;
+        try {
+          await supabase.auth.signOut();
+        } catch {
+          /* session is already dead — cookies just expire */
+        }
+        return Astro.redirect('/');
+      } catch {
+        result = {
+          ok: false,
+          scope: 'delete',
+          message: 'Deletion is not configured on this deployment — contact the curator.',
+        };
+      }
+    }
+  }
+}
+
+// Read after writes so the forms render fresh values.
+const profile = await getProfileRow(supabase, user.id);
+const details = await getProfileDetails(supabase, user.id);
+const displayName = profile?.display_name || user.email?.split('@')[0] || '';
+---
+
+<Base title="Settings" section="account" theme={details?.theme ?? null}>
+  <section class="settings">
+    <header class="set-head">
+      <div>
+        <span class="eyebrow">Account · control room</span>
+        <h1>Settings</h1>
+      </div>
+      <a class="set-back mono" href="/dashboard">Back to your page</a>
+    </header>
+
+    <section class="set-panel">
+      <div class="section-label set-label">
+        <span class="eyebrow">Profile</span>
+        <span class="line"></span>
+      </div>
+      <form class="ugc-form" method="POST">
+        <input type="hidden" name="action" value="save-profile" />
+        <label class="ugc-label" for="display_name">Display name</label>
+        <input
+          class="ugc-input"
+          id="display_name"
+          name="display_name"
+          type="text"
+          maxlength="60"
+          required
+          value={displayName}
+        />
+        <label class="ugc-label" for="status_line">Status — what's the mood?</label>
+        <input
+          class="ugc-input"
+          id="status_line"
+          name="status_line"
+          type="text"
+          maxlength="140"
+          placeholder="drifting somewhere between stations…"
+          value={details?.status_line ?? ''}
+        />
+        <label class="ugc-label" for="bio">About</label>
+        <textarea class="ugc-textarea" id="bio" name="bio" rows="5" maxlength="2000"
+          placeholder="Who's broadcasting?">{details?.bio ?? ''}</textarea>
+        <label class="ugc-label" for="profile_song_ref">Profile signal — the song your page plays</label>
+        <select class="ugc-select" id="profile_song_ref" name="profile_song_ref">
+          <option value="">None</option>
+          <optgroup label="Broadcasts">
+            {
+              episodes.map((e) => (
+                <option value={e.slug} selected={details?.profile_song_ref === e.slug}>
+                  {e.catLabel} — {e.title}
+                </option>
+              ))
+            }
+          </optgroup>
+          {
+            myMixes.length > 0 && (
+              <optgroup label="Your published mixes">
+                {myMixes.map((m) => (
+                  <option value={m.id} selected={details?.profile_song_ref === m.id}>
+                    {m.title}
+                  </option>
+                ))}
+              </optgroup>
+            )
+          }
+        </select>
+        {result?.scope === 'profile' && <p class={result.ok ? 'set-ok mono' : 'ugc-error'}>{result.message}</p>}
+        <button class="ugc-submit" type="submit">Save profile</button>
+      </form>
+    </section>
+
+    <section class="set-panel">
+      <div class="section-label set-label">
+        <span class="eyebrow">Profile picture</span>
+        <span class="line"></span>
+      </div>
+      <form class="ugc-form" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="action" value="save-avatar" />
+        {
+          profile?.avatar_url && (
+            <img class="set-avatar" src={profile.avatar_url} alt="Current profile picture" />
+          )
+        }
+        <input class="ugc-file" name="avatar" type="file" accept="image/jpeg,image/png,image/webp" />
+        <span class="ugc-hint">JPG, PNG, or WebP — up to {Math.floor(IMAGE_MAX_BYTES / (1024 * 1024))}MB.</span>
+        {result?.scope === 'avatar' && <p class={result.ok ? 'set-ok mono' : 'ugc-error'}>{result.message}</p>}
+        <button class="ugc-submit ghost" type="submit">Upload picture</button>
+      </form>
+    </section>
+
+    <section class="set-panel">
+      <div class="section-label set-label">
+        <span class="eyebrow">Privacy</span>
+        <span class="line"></span>
+      </div>
+      <form class="ugc-form" method="POST">
+        <input type="hidden" name="action" value="save-privacy" />
+        <label class="set-radio">
+          <input type="radio" name="visibility" value="private" checked={!details?.is_public} />
+          <span><b>Private</b> — only you can see your page. Your published mixes, posts, and photos stay on the community shelf.</span>
+        </label>
+        <label class="set-radio">
+          <input type="radio" name="visibility" value="public" checked={details?.is_public} />
+          <span><b>Public</b> — anyone can visit <span class="mono">/u/…</span> and see your page: bio, rotation, profile signal, and published work.</span>
+        </label>
+        {result?.scope === 'privacy' && <p class={result.ok ? 'set-ok mono' : 'ugc-error'}>{result.message}</p>}
+        <button class="ugc-submit ghost" type="submit">Save visibility</button>
+      </form>
+    </section>
+
+    <section class="set-panel">
+      <div class="section-label set-label">
+        <span class="eyebrow">Preferences</span>
+        <span class="line"></span>
+      </div>
+      <form class="ugc-form" method="POST">
+        <input type="hidden" name="action" value="save-prefs" />
+        <label class="set-radio">
+          <input type="radio" name="theme" value="dark" checked={details?.theme !== 'light'} />
+          <span><b>Dark</b> — the house signal.</span>
+        </label>
+        <label class="set-radio">
+          <input type="radio" name="theme" value="light" checked={details?.theme === 'light'} />
+          <span><b>Light</b> — the same signal on bone paper.</span>
+        </label>
+        {result?.scope === 'prefs' && <p class={result.ok ? 'set-ok mono' : 'ugc-error'}>{result.message}</p>}
+        <button class="ugc-submit ghost" type="submit">Save preference</button>
+      </form>
+    </section>
+
+    <section class="set-panel set-danger">
+      <div class="section-label set-label">
+        <span class="eyebrow">Delete account</span>
+        <span class="line"></span>
+      </div>
+      <p class="set-warn">
+        This removes your profile, favorites, playlists, listening history, rotation, and unpublished
+        submissions — permanently. Published contributions are removed with them.
+      </p>
+      <form class="ugc-form" method="POST">
+        <input type="hidden" name="action" value="delete-account" />
+        <label class="ugc-label" for="confirm">Type DELETE to confirm</label>
+        <input class="ugc-input" id="confirm" name="confirm" type="text" autocomplete="off" />
+        {result?.scope === 'delete' && <p class={result.ok ? 'set-ok mono' : 'ugc-error'}>{result.message}</p>}
+        <button class="ugc-submit danger" type="submit">Delete my account</button>
+      </form>
+    </section>
+  </section>
+</Base>
+
+<style>
+  .settings {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 50px 48px 220px;
+  }
+  .set-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 30px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .set-head h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    color: var(--ink);
+    margin-top: 14px;
+  }
+  .set-back {
+    flex: none;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 11px 18px;
+    color: var(--ink-2);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.625rem;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .set-back:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+  .set-panel {
+    margin-top: 44px;
+  }
+  .set-label {
+    padding: 0;
+    margin: 0 0 20px;
+  }
+  .set-avatar {
+    width: 110px;
+    height: 110px;
+    object-fit: cover;
+    border: 1px solid var(--hairline);
+    filter: grayscale(0.25) contrast(1.04);
+  }
+  .set-radio {
+    display: flex;
+    gap: 12px;
+    align-items: baseline;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .set-radio input {
+    accent-color: var(--ember);
+  }
+  .set-radio b {
+    font-weight: 400;
+    color: var(--ink);
+  }
+  .set-ok {
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    color: var(--fog-olive);
+    margin-top: 4px;
+  }
+  .set-danger .set-warn {
+    color: var(--ink-2);
+    font-size: 0.9375rem;
+    line-height: 1.7;
+    margin-bottom: 18px;
+  }
+  .ugc-submit.danger {
+    background: none;
+    border: 1px solid var(--ember-deep);
+    color: var(--ember-deep);
+  }
+  .ugc-submit.danger:hover {
+    background: var(--ember-deep);
+    color: var(--ink);
+    transform: none;
+  }
+</style>

@@ -1,0 +1,62 @@
+---
+/**
+ * Owner control on UGC detail pages: one button that flips the piece between
+ * private and published (POST back to the hosting page, action=set-visibility,
+ * PRG on success). Removed pieces get a note instead — takedowns are the
+ * curator's, and RLS would refuse the update anyway.
+ */
+interface Props {
+  status: string;
+  error?: string | null;
+}
+const { status, error = null } = Astro.props;
+const next = status === 'published' ? 'private' : 'published';
+---
+
+<div class="vis">
+  {
+    status === 'removed' ? (
+      <p class="vis-note mono">Taken down by the curator — reply to the takedown notice if you think that's wrong.</p>
+    ) : (
+      <form method="POST" data-astro-reload>
+        <input type="hidden" name="action" value="set-visibility" />
+        <input type="hidden" name="visibility" value={next} />
+        <button class="vis-btn mono" type="submit">
+          {status === 'published' ? 'Make it private' : 'Publish it'}
+        </button>
+      </form>
+    )
+  }
+  {error && <p class="ugc-error">{error}</p>}
+</div>
+
+<style>
+  .vis {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .vis-btn {
+    align-self: flex-start;
+    background: none;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 10px 18px;
+    color: var(--ink-2);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.625rem;
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .vis-btn:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+  .vis-note {
+    font-size: 0.625rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ember-deep);
+  }
+</style>

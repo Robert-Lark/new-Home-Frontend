@@ -1,0 +1,185 @@
+---
+export const prerender = false;
+import Base from '../../layouts/Base.astro';
+import ReportForm from '../../components/ReportForm.astro';
+import VisibilityToggle from '../../components/VisibilityToggle.astro';
+import { handleReport, setVisibility } from '../../lib/report';
+import { displayNames, publicProfileIds, ugcDate } from '../../lib/ugc';
+
+const id = Astro.params.id!;
+const supabase = Astro.locals.supabase;
+const user = Astro.locals.user;
+
+// One formData read, dispatched on `action`: the owner's visibility toggle
+// (PRG on success) or a report.
+let reportResult: { ok: boolean; message: string } | null = null;
+let visError: string | null = null;
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  if (form.get('action') === 'set-visibility') {
+    visError = await setVisibility(Astro.locals, 'lists', id, form);
+    if (!visError) return Astro.redirect(`/lists/${id}`, 303);
+  } else {
+    reportResult = await handleReport(form, Astro.locals, 'list', id);
+  }
+}
+
+const { data: list } = await supabase
+  .from('lists')
+  .select('id, user_id, title, description, status, created_at, list_items(id, item_type, title, note, url, position)')
+  .eq('id', id)
+  .maybeSingle();
+if (!list) return Astro.redirect('/community');
+
+const names = await displayNames(supabase, [list.user_id]);
+const author = names.get(list.user_id) ?? 'a listener';
+const authorHref = (await publicProfileIds(supabase, [list.user_id])).has(list.user_id)
+  ? `/u/${list.user_id}`
+  : null;
+const own = user?.id === list.user_id;
+const items = [...(list.list_items ?? [])].sort((a, b) => a.position - b.position);
+---
+
+<Base title={list.title} description={list.description ?? undefined} section="community">
+  <article class="list">
+    <header>
+      <span class="eyebrow">
+        Listener list · {ugcDate(list.created_at)}
+        {
+          list.status !== 'published' && (
+            <span class="badge">
+              {list.status === 'removed' ? 'removed by the curator' : list.status} — only you can see this
+            </span>
+          )
+        }
+      </span>
+      <h1>{list.title}</h1>
+      <p class="byline">by {authorHref ? <a href={authorHref}>{author}</a> : author}</p>
+      {list.description && <p class="desc">{list.description}</p>}
+      {own && <VisibilityToggle status={list.status} error={visError} />}
+    </header>
+
+    <ol class="entries">
+      {
+        items.map((item, i) => (
+          <li>
+            <span class="n mono">{String(i + 1).padStart(2, '0')}</span>
+            <div class="entry">
+              <span class="entry-head">
+                <span class="t">
+                  {item.url ? (
+                    <a href={item.url} rel="nofollow noopener ugc" target="_blank">
+                      {item.title}
+                    </a>
+                  ) : (
+                    item.title
+                  )}
+                </span>
+                <span class="kind mono">{item.item_type}</span>
+              </span>
+              {item.note && <span class="note">{item.note}</span>}
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+
+    {!own && <ReportForm signedIn={Boolean(user)} result={reportResult} />}
+  </article>
+</Base>
+
+<style>
+  .list {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 80px 48px 220px;
+  }
+  .badge {
+    margin-left: 12px;
+    color: var(--ember);
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    line-height: 1.18;
+    color: var(--ink);
+    margin: 18px 0 10px;
+  }
+  .byline {
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    font-size: 0.6875rem;
+    color: var(--ember);
+  }
+  .byline a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+  .desc {
+    margin-top: 22px;
+    color: var(--ink-2);
+    font-size: 1rem;
+    line-height: 1.7;
+    max-width: 56ch;
+  }
+  .entries {
+    list-style: none;
+    margin-top: 44px;
+    display: flex;
+    flex-direction: column;
+  }
+  .entries li {
+    display: flex;
+    gap: 20px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--hairline-soft);
+  }
+  .n {
+    font-size: 0.625rem;
+    color: var(--ink-3);
+    letter-spacing: 0.1em;
+    padding-top: 4px;
+  }
+  .entry {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .entry-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .t,
+  .t a {
+    font-size: 1.0625rem;
+    color: var(--ink);
+  }
+  .t a {
+    text-underline-offset: 4px;
+  }
+  .t a:hover {
+    color: var(--ember);
+  }
+  .kind {
+    font-size: 0.625rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 2px 9px;
+  }
+  .note {
+    color: var(--ink-2);
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+</style>

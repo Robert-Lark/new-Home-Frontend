@@ -1,0 +1,195 @@
+/* Quiet Cast — image-grounded design tokens (source of truth).
+   Grounded in vision analysis of Cryo Chamber / Ant-Zen / HANDS cover art,
+   Burtynsky / Giger / Hsieh fine art, and rendered designer portfolios.
+   The one cross-validated law: exactly ONE warm/saturated accent per view.
+
+   Theming: dark is the house signal and the default everywhere; light is
+   opt-in via html[data-theme='light'] (set pre-paint by the Base.astro
+   inline script from localStorage / the signed-in preference). Every color
+   the site renders resolves through this file — pages and islands must not
+   carry raw hex/rgba (over-art surfaces use the theme-invariant tokens
+   below instead). color-scheme rides along so native UI (scrollbars, form
+   controls, date pickers) follows the theme. */
+:root {
+  color-scheme: dark;
+
+  /* near-black bases (converged: Cryo #101014, Giger #1b1b1c, Ant-Zen #0b0b0b, Hsieh #121212) */
+  --canvas: #0d0e10;
+  --surface-1: #15161a;
+  --surface-2: #1d1f24;
+  --recess: #08090b; /* carved void (Burtynsky dark recess) */
+
+  /* granite ramp (Burtynsky quarries) */
+  --gunmetal: #55565a;
+  --stone: #8b8478;
+  --marble: #c8c4b9;
+
+  /* atmosphere (Cryo swamp fog) */
+  --fog-olive: #8c9272;
+  --fog-teal: #2c4150;
+
+  /* ink — bone, never pure white */
+  --ink: #d9d5c8;
+  --ink-2: #9a9ca0;
+  --ink-3: #6e6e66;
+  --hairline: rgba(217, 213, 200, 0.12);
+  --hairline-soft: rgba(217, 213, 200, 0.06);
+
+  /* the one rationed warm accent — "cold but warm sunrise" */
+  --ember: #b08a5e; /* Burtynsky stone-stain ochre (default warm) */
+  --ember-deep: #6f2b38; /* oxblood — playing/active */
+  --gold: #b08a3a; /* Giger dull gold alt */
+  --steel: #7e8a92; /* cold secondary */
+
+  /* ink/icon sitting ON the ember accent (play buttons, submit pills) */
+  --on-ember: #0d0e10;
+
+  /* translucent chrome floating over PAGE surfaces (flips with theme) */
+  --glass: rgba(13, 14, 16, 0.72); /* player dock */
+  --glass-strong: rgba(20, 21, 24, 0.96); /* popover menus */
+
+  /* shadow base — consumed via color-mix(in srgb, var(--shadow) N%, transparent)
+     so one flip rebalances every recess/drop shadow */
+  --shadow: rgba(0, 0, 0, 1);
+  --edge-glint: rgba(255, 255, 255, 0.04); /* inset top highlight on glass */
+
+  /* over-art constants — DELIBERATELY theme-invariant. Scrims, pills, and
+     washes that sit on artwork (hero hover bands, tile controls, the
+     now-playing view) stay dark in both themes; the art doesn't change.
+     Consumed via color-mix alphas at the use site. */
+  --overart: #08090b;
+  --overart-ink: #d9d5c8;
+  --overart-ink-2: #9a9ca0;
+  --overart-ink-3: #6e6e66;
+  --overart-hairline: rgba(217, 213, 200, 0.12);
+  --overart-hairline-soft: rgba(217, 213, 200, 0.06);
+
+  /* the interviews bone-paper document — a printed object, same in both
+     themes (its drop shadow flips through --shadow like everything else) */
+  --paper-ink: #211d15;
+  --paper-ink-strong: #14110c;
+  --paper-ink-body: #2a2419;
+  --paper-ink-soft: #5c5446;
+  --paper-line: #b3ae9f;
+  --paper-rule: #bdb8a8;
+  --paper-glint: rgba(255, 255, 255, 0.35);
+
+  /* motion (verified: emilkowal.ski) */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 180ms; /* interactive feedback */
+  --dur-page: 320ms; /* page view-transitions / player expand (Sonner principle) */
+}
+
+/* ---- Light mode — opt-in, Cold Ember on bone paper. -------------------
+   Same anatomy, flipped field: paper canvas, bone-black ink, the ember
+   darkened to stone-stain ochre so the one-warm-accent law keeps 4.5:1
+   text / 3:1 UI contrast (ratios tool-verified). ember-deep oxblood
+   already reads on paper (the interviews panel proves it) and is kept. */
+[data-theme='light'] {
+  color-scheme: light;
+
+  --canvas: #f3f1ea;
+  --surface-1: #eae7de;
+  --surface-2: #e2ded3;
+  --recess: #d8d4c8; /* pressed paper, not carved void */
+
+  --gunmetal: #6b6c70;
+  --stone: #6b6353;
+  /* --marble unchanged — the paper object keeps its tone */
+
+  --fog-olive: #59663d;
+  /* --fog-teal unchanged — only ever a low-alpha wash */
+
+  --ink: #26231b;
+  --ink-2: #565148;
+  --ink-3: #655e50;
+  --hairline: rgba(38, 35, 27, 0.16);
+  --hairline-soft: rgba(38, 35, 27, 0.08);
+
+  --ember: #84592e;
+  /* --ember-deep unchanged — 8.9:1 on the paper canvas */
+  --gold: #8a6f2e;
+  --steel: #56646e;
+
+  --on-ember: #f7f5ef;
+
+  --glass: rgba(242, 240, 233, 0.78);
+  --glass-strong: rgba(238, 236, 228, 0.97);
+
+  --shadow: rgba(61, 53, 38, 0.35);
+  --edge-glint: rgba(255, 255, 255, 0.55);
+}
+
+/* Over-art surfaces keep the dark ramp in light mode: their backdrops are
+   artwork scrims (--overart), so their ink must stay bone. Scoped re-pin of
+   the consumed tokens rather than per-property overrides. */
+[data-theme='light'] .now-playing,
+[data-theme='light'] .card .band,
+[data-theme='light'] .card-actions,
+[data-theme='light'] .p-tile-x,
+[data-theme='light'] .p-tile-grab,
+[data-theme='light'] .p-tile-mv {
+  color-scheme: dark;
+  --ink: var(--overart-ink);
+  --ink-2: var(--overart-ink-2);
+  --ink-3: var(--overart-ink-3);
+  --hairline: var(--overart-hairline);
+  --hairline-soft: var(--overart-hairline-soft);
+  --on-ember: #0d0e10;
+  --shadow: rgba(0, 0, 0, 1);
+  --fog-olive: #8c9272;
+  --fog-teal: #2c4150;
+  --recess: #08090b;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* universal film/xerox grain — observed across every label cover.
+   Fixed overlay so it reads as a property of the surface, not the content.
+   On paper the overlay blend would brighten instead of texture, so light
+   mode multiplies it down like print grain. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+[data-theme='light'] body::after {
+  mix-blend-mode: multiply;
+  opacity: 0.04;
+}
+
+/* utility: tracked caps label */
+.eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.34em;
+  font-size: 0.625rem;
+  color: var(--ink-3);
+}
+.mono {
+  font-family: 'IBM Plex Mono', monospace;
+}

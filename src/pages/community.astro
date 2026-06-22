@@ -1,0 +1,498 @@
+---
+export const prerender = false;
+import Base from '../layouts/Base.astro';
+import { cdnUrl, displayNames, publicProfileIds, ugcDate, durationLabel } from '../lib/ugc';
+
+/**
+ * The community shelf: everything listeners have chosen to publish.
+ * Anonymous-readable — RLS lets published rows through without a session.
+ */
+const supabase = Astro.locals.supabase;
+const signedIn = Boolean(Astro.locals.user);
+
+// Defensive: tables may not exist until the 0002 migration runs.
+async function safe<T>(query: PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
+  try {
+    const { data, error } = await query;
+    return error || !data ? [] : data;
+  } catch {
+    return [];
+  }
+}
+
+const FALLBACK_COVER = '/images/cryo_01.jpg';
+
+const mixes = await safe<{
+  id: string;
+  user_id: string;
+  title: string;
+  cover_r2_key: string | null;
+  duration: number | null;
+  created_at: string;
+}>(
+  supabase
+    .from('user_uploads')
+    .select('id, user_id, title, cover_r2_key, duration, created_at')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(12),
+);
+
+const posts = await safe<{ id: string; user_id: string; title: string; created_at: string }>(
+  supabase
+    .from('posts')
+    .select('id, user_id, title, created_at')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(12),
+);
+
+const lists = await safe<{
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  created_at: string;
+}>(
+  supabase
+    .from('lists')
+    .select('id, user_id, title, description, created_at')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(12),
+);
+
+const albums = await safe<{
+  id: string;
+  user_id: string;
+  title: string;
+  venue: string | null;
+  event_date: string | null;
+  created_at: string;
+  photos: Array<{ r2_key: string; position: number }>;
+}>(
+  supabase
+    .from('photo_albums')
+    .select('id, user_id, title, venue, event_date, created_at, photos(r2_key, position)')
+    .eq('status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(12),
+);
+
+/**
+ * The permanent listener directory at the top of the page. `profiles` is
+ * world-readable (0001 `profiles_select_all`), so this lists everyone signed
+ * up; each tile links to /u/<id>, which already renders the "page is private"
+ * view for listeners who haven't made their profile public. display_name is
+ * never null (the handle_new_user trigger seeds it from the email local-part).
+ */
+const members = await safe<{
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  created_at: string;
+}>(
+  supabase
+    .from('profiles')
+    .select('id, display_name, avatar_url, created_at')
+    .order('created_at', { ascending: false }),
+);
+
+const uids = [
+  ...mixes.map((m) => m.user_id),
+  ...posts.map((p) => p.user_id),
+  ...lists.map((l) => l.user_id),
+  ...albums.map((a) => a.user_id),
+];
+const [names, publicIds] = await Promise.all([
+  displayNames(supabase, uids),
+  publicProfileIds(supabase, uids),
+]);
+const by = (uid: string) => names.get(uid) ?? 'a listener';
+
+const albumThumb = (a: (typeof albums)[number]) => {
+  const first = [...a.photos].sort((x, y) => x.position - y.position)[0];
+  return first ? cdnUrl(first.r2_key) : FALLBACK_COVER;
+};
+
+const empty = mixes.length + posts.length + lists.length + albums.length === 0;
+---
+
+<Base
+  title="Community"
+  description="Mixes, writing, lists, and concert photos from Quiet Cast listeners."
+  section="community"
+>
+  <section class="community">
+    <header class="head">
+      <div>
+        <span class="eyebrow">From the listeners</span>
+        <h1>Community</h1>
+      </div>
+      <a class="cta" href={signedIn ? '/contribute' : '/login'}>Contribute</a>
+    </header>
+
+    <div class="section-label">
+      <span class="eyebrow">Listeners</span>
+      <span class="line" />
+      <span class="eyebrow">{members.length}</span>
+    </div>
+    {
+      members.length > 0 ? (
+        <div class="member-grid">
+          {members.map((m) => {
+            const name = m.display_name?.trim() || 'A listener';
+            const initial = (name[0] ?? 'Q').toUpperCase();
+            return (
+              <a class="member" href={`/u/${m.id}`}>
+                {m.avatar_url ? (
+                  <img class="m-avatar" src={m.avatar_url} alt="" loading="lazy" />
+                ) : (
+                  <span class="m-avatar m-fallback" aria-hidden="true">
+                    {initial}
+                  </span>
+                )}
+                <span class="m-name mono">{name}</span>
+              </a>
+            );
+          })}
+        </div>
+      ) : (
+        <p class="empty">No listeners yet.</p>
+      )
+    }
+
+    {
+      empty && (
+        <p class="empty">
+          Nothing published yet. Be first —{' '}
+          <a href={signedIn ? '/contribute' : '/login'}>upload a mix, write a post, make a list, or share concert photos</a>.
+        </p>
+      )
+    }
+
+    {
+      mixes.length > 0 && (
+        <>
+          <div class="section-label">
+            <span class="eyebrow">Mixes</span>
+            <span class="line" />
+            <span class="eyebrow">{mixes.length}</span>
+          </div>
+          <div class="mix-grid">
+            {mixes.map((m) => (
+              <div class="mix">
+                <a class="card-link" href={`/mixes/${m.id}`}>
+                  <img
+                    src={m.cover_r2_key ? cdnUrl(m.cover_r2_key) : FALLBACK_COVER}
+                    alt=""
+                    loading="lazy"
+                  />
+                  <span class="mix-t">{m.title}</span>
+                </a>
+                <span class="mix-b mono">
+                  {publicIds.has(m.user_id) ? (
+                    <a class="by-link" href={`/u/${m.user_id}`}>{by(m.user_id)}</a>
+                  ) : (
+                    by(m.user_id)
+                  )}
+                  {durationLabel(m.duration) ? ` · ${durationLabel(m.duration)}` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )
+    }
+
+    {
+      posts.length > 0 && (
+        <>
+          <div class="section-label">
+            <span class="eyebrow">Writing</span>
+            <span class="line" />
+            <span class="eyebrow">{posts.length}</span>
+          </div>
+          <ul class="rows">
+            {posts.map((p) => (
+              <li>
+                <a class="row-t" href={`/posts/${p.id}`}>
+                  {p.title}
+                </a>
+                <span class="row-n mono">
+                  {publicIds.has(p.user_id) ? (
+                    <a class="by-link" href={`/u/${p.user_id}`}>{by(p.user_id)}</a>
+                  ) : (
+                    by(p.user_id)
+                  )}{' '}
+                  · {ugcDate(p.created_at)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )
+    }
+
+    {
+      lists.length > 0 && (
+        <>
+          <div class="section-label">
+            <span class="eyebrow">Lists</span>
+            <span class="line" />
+            <span class="eyebrow">{lists.length}</span>
+          </div>
+          <ul class="rows">
+            {lists.map((l) => (
+              <li>
+                <a class="row-t" href={`/lists/${l.id}`}>
+                  {l.title}
+                </a>
+                <span class="row-n mono">
+                  {publicIds.has(l.user_id) ? (
+                    <a class="by-link" href={`/u/${l.user_id}`}>{by(l.user_id)}</a>
+                  ) : (
+                    by(l.user_id)
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )
+    }
+
+    {
+      albums.length > 0 && (
+        <>
+          <div class="section-label">
+            <span class="eyebrow">Concert photos</span>
+            <span class="line" />
+            <span class="eyebrow">{albums.length}</span>
+          </div>
+          <div class="album-grid">
+            {albums.map((a) => (
+              <div class="album">
+                <a class="card-link" href={`/photos/${a.id}`}>
+                  <img src={albumThumb(a)} alt="" loading="lazy" />
+                  <span class="mix-t">{a.title}</span>
+                </a>
+                <span class="mix-b mono">
+                  {a.venue ? `${a.venue} · ` : ''}
+                  {a.event_date ? (
+                    ugcDate(a.event_date)
+                  ) : publicIds.has(a.user_id) ? (
+                    <a class="by-link" href={`/u/${a.user_id}`}>{by(a.user_id)}</a>
+                  ) : (
+                    by(a.user_id)
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )
+    }
+  </section>
+</Base>
+
+<style>
+  .community {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 50px 48px 220px;
+  }
+  .head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 30px;
+    border-bottom: 1px solid var(--hairline);
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    color: var(--ink);
+    margin-top: 14px;
+  }
+  .cta {
+    flex: none;
+    border: 1px solid var(--hairline);
+    color: var(--ink-2);
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 0.625rem;
+    padding: 11px 18px;
+    border-radius: 999px;
+    text-decoration: none;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .cta:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+  .section-label {
+    padding: 0;
+    margin: 44px 0 20px;
+  }
+  .empty {
+    margin-top: 40px;
+    color: var(--ink-3);
+    font-style: italic;
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+  .empty a {
+    color: var(--ink-2);
+  }
+
+  /* Listener directory — square avatars to match the rest of the site. */
+  .member-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: 10px;
+  }
+  .member {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-decoration: none;
+    text-align: center;
+  }
+  .m-avatar {
+    width: 100%;
+    aspect-ratio: 1;
+    display: block;
+    object-fit: cover;
+    background: var(--recess);
+    border: 1px solid var(--hairline);
+    filter: grayscale(0.35) contrast(1.05);
+    transition: filter var(--dur-fast) var(--ease-out);
+  }
+  .member:hover .m-avatar {
+    filter: none;
+  }
+  .m-fallback {
+    display: grid;
+    place-items: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: 2.25rem;
+    color: var(--ink-3);
+    box-shadow: inset 0 2px 24px color-mix(in srgb, var(--shadow) 70%, transparent);
+  }
+  .m-name {
+    display: block;
+    max-width: 100%;
+    font-size: 0.625rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .member:hover .m-name {
+    color: var(--ember);
+  }
+
+  .mix-grid,
+  .album-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .mix,
+  .album {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 14px;
+  }
+  .card-link {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-decoration: none;
+  }
+  .mix img,
+  .album img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+    filter: grayscale(0.35) contrast(1.05);
+    transition: filter var(--dur-fast) var(--ease-out);
+  }
+  .card-link:hover img {
+    filter: none;
+  }
+  .by-link {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--hairline);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .by-link:hover {
+    color: var(--ember);
+  }
+  .mix-t {
+    margin-top: 6px;
+    font-size: 0.875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .mix-b {
+    font-size: 0.625rem;
+    letter-spacing: 0.14em;
+    color: var(--ink-3);
+  }
+
+  .rows {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+  }
+  .rows li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--hairline-soft);
+  }
+  .row-t {
+    color: var(--ink);
+    font-size: 1rem;
+    text-decoration: none;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .row-t:hover {
+    color: var(--ember);
+  }
+  .row-n {
+    font-size: 0.625rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 860px) {
+    .mix-grid,
+    .album-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .member-grid {
+      grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    }
+  }
+</style>

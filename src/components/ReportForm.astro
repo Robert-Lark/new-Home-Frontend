@@ -1,0 +1,83 @@
+---
+/**
+ * Report control for UGC detail pages. Plain <details> + form POST back to the
+ * hosting page, which runs handleReport() (lib/report.ts) and passes the
+ * outcome back here. Signed-out users get a sign-in link instead.
+ */
+interface Props {
+  signedIn: boolean;
+  result?: { ok: boolean; message: string } | null;
+}
+const { signedIn, result = null } = Astro.props;
+---
+
+<div class="report">
+  {result && <p class={`report-msg mono${result.ok ? ' ok' : ''}`}>{result.message}</p>}
+  {
+    !result?.ok &&
+      (signedIn ? (
+        <details>
+          <summary class="mono">Report this</summary>
+          <form method="POST" data-astro-reload>
+            <textarea
+              class="ugc-textarea"
+              name="reason"
+              rows="3"
+              required
+              maxlength="1000"
+              placeholder="What's wrong with it?"></textarea>
+            <button class="ugc-submit ghost" type="submit">Send report</button>
+          </form>
+        </details>
+      ) : (
+        <p class="report-msg mono">
+          <a href="/login">Sign in</a> to report content.
+        </p>
+      ))
+  }
+</div>
+
+<style>
+  .report {
+    margin-top: 56px;
+    padding-top: 22px;
+    border-top: 1px solid var(--hairline-soft);
+  }
+  summary {
+    cursor: pointer;
+    font-size: 0.625rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  summary:hover {
+    color: var(--ember);
+  }
+  details[open] summary {
+    color: var(--ink-2);
+    margin-bottom: 14px;
+  }
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+    max-width: 480px;
+  }
+  .report-msg {
+    font-size: 0.625rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .report-msg.ok {
+    color: var(--ember);
+  }
+  .report-msg a {
+    color: inherit;
+  }
+</style>

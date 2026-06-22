@@ -1,0 +1,452 @@
+---
+import Base from '../layouts/Base.astro';
+import { getEpisodes, sizedCover } from '../lib/content';
+
+// The legacy `interview` docs that actually carry a Q&A are the interviews.
+// (Mix-only episodes — e.g. SaffronKeira, Olan Mill — have no Q&A and are
+// excluded.) Ordered ascending so the ledger reads chronologically.
+const interviews = (await getEpisodes())
+  .filter((e) => e.qa.length > 0)
+  .sort((a, b) => a.cat - b.cat);
+
+const count = interviews.length;
+const years = interviews.map((e) => e.year).filter((y): y is string => Boolean(y));
+const span = years.length
+  ? (() => {
+      const lo = years.reduce((a, b) => (a < b ? a : b));
+      const hi = years.reduce((a, b) => (a > b ? a : b));
+      return lo === hi ? lo : `${lo}—${hi}`;
+    })()
+  : '';
+---
+
+<Base title="Interviews" section="interviews">
+  <div class="iv-head">
+    <h1>Interviews</h1>
+    <span class="iv-count mono">{count} conversations{span ? ` · ${span}` : ''}</span>
+  </div>
+
+  <section class="iv" data-iv-root>
+    {/* Index — plain anchor links (work without JS as in-page jumps); the
+        controller upgrades them to an ARIA tablist with arrow-key navigation. */}
+    <div class="iv-index" data-iv-tablist>
+      {
+        interviews.map((e, i) => (
+          <a
+            class="iv-name"
+            href={`#iv-${e.slug}`}
+            data-iv-tab={e.slug}
+            aria-selected={i === 0 ? 'true' : 'false'}
+          >
+            <span class="iv-name-cat">{e.catLabel}</span>
+            <span class="iv-name-artist">{e.artist}</span>
+          </a>
+        ))
+      }
+    </div>
+
+    {/* Reading pane — every interview is rendered (view-source friendly, SEO);
+        only the active one shows. Cross-faded via the View Transitions API. */}
+    <div class="iv-reader" data-iv-reader>
+      {
+        interviews.map((e, i) => (
+          <article
+            class:list={['iv-panel', { 'is-active': i === 0 }]}
+            id={`iv-${e.slug}`}
+            data-iv-panel={e.slug}
+          >
+            <header class="iv-doc-head">
+              {e.coverUrl && (
+                <img
+                  class="iv-doc-cover"
+                  src={sizedCover(e.coverUrl, 200)}
+                  alt=""
+                  width="84"
+                  height="84"
+                  loading="lazy"
+                />
+              )}
+              <div class="iv-doc-headtext">
+                <span class="iv-eyebrow">
+                  {e.catLabel}
+                  {e.year ? ` · ${e.year}` : ''}
+                </span>
+                <h2 class="iv-doc-title">{e.artist}</h2>
+                <p class="iv-sub">
+                  In conversation ·{' '}
+                  <a class="iv-listen" href={`/show/${e.slug}`}>
+                    listen to the mix ↗
+                  </a>
+                </p>
+              </div>
+            </header>
+            <div class="iv-doc-rule"></div>
+            <div class="iv-qa">
+              {e.qa.map((pair) => (
+                <div class="iv-pair">
+                  <p class="iv-q">{pair.q}</p>
+                  <p class="iv-a">{pair.a}</p>
+                </div>
+              ))}
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  {/* No-JS fallback: reveal every interview (stacked) so all content stays
+      reachable; the anchor links above still jump to each. */}
+  <noscript>
+    <style>
+      .iv-panel {
+        display: block !important;
+        margin-bottom: 28px;
+      }
+    </style>
+  </noscript>
+</Base>
+
+<script>
+  // Master–detail controller: upgrades the index to an ARIA tablist and swaps
+  // the reading pane with a scoped View-Transition cross-fade. Idempotent and
+  // re-runs after ClientRouter navigations via astro:page-load.
+  function initInterviews() {
+    const root = document.querySelector('[data-iv-root]');
+    if (!(root instanceof HTMLElement) || root.dataset.ivInit === '1') return;
+    const list = root.querySelector<HTMLElement>('[data-iv-tablist]');
+    const reader = root.querySelector<HTMLElement>('[data-iv-reader]');
+    if (!list || !reader) return;
+    root.dataset.ivInit = '1';
+    const readerEl: HTMLElement = reader;
+
+    const tabs = Array.from(list.querySelectorAll<HTMLElement>('[data-iv-tab]'));
+    const panel = (slug: string) =>
+      root.querySelector<HTMLElement>(`[data-iv-panel="${CSS.escape(slug)}"]`);
+
+    list.setAttribute('role', 'tablist');
+    list.setAttribute('aria-label', 'Interviews');
+    for (const tab of tabs) {
+      const slug = tab.dataset.ivTab ?? '';
+      const p = panel(slug);
+      const on = tab.getAttribute('aria-selected') === 'true';
+      tab.setAttribute('role', 'tab');
+      tab.id = `tab-${slug}`;
+      tab.setAttribute('tabindex', on ? '0' : '-1');
+      if (p) {
+        tab.setAttribute('aria-controls', p.id);
+        p.setAttribute('role', 'tabpanel');
+        p.setAttribute('aria-labelledby', tab.id);
+      }
+    }
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const setTabState = (slug: string) => {
+      for (const tab of tabs) {
+        const on = tab.dataset.ivTab === slug;
+        tab.setAttribute('aria-selected', on ? 'true' : 'false');
+        tab.setAttribute('tabindex', on ? '0' : '-1');
+      }
+    };
+    const setPanelState = (slug: string) => {
+      for (const p of root.querySelectorAll<HTMLElement>('[data-iv-panel]')) {
+        p.classList.toggle('is-active', p.dataset.ivPanel === slug);
+      }
+    };
+    const reanchor = () => {
+      if (root.getBoundingClientRect().top < 0) {
+        root.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' });
+      }
+    };
+
+    function activate(slug: string, focusTab: boolean) {
+      setTabState(slug); // immediate: keyboard stays snappy
+      if (focusTab) document.getElementById(`tab-${slug}`)?.focus();
+      const swap = () => setPanelState(slug);
+      if (typeof document.startViewTransition === 'function' && !reduce) {
+        readerEl.style.viewTransitionName = 'iv-reader';
+        document.startViewTransition(swap).finished.finally(() => {
+          readerEl.style.viewTransitionName = '';
+          reanchor();
+        });
+      } else {
+        swap();
+        reanchor();
+      }
+    }
+
+    list.addEventListener('click', (e) => {
+      const t = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-iv-tab]') : null;
+      if (!t || !t.dataset.ivTab) return;
+      e.preventDefault();
+      activate(t.dataset.ivTab, false);
+    });
+
+    list.addEventListener('keydown', (e) => {
+      const i = tabs.findIndex((t) => t.getAttribute('aria-selected') === 'true');
+      let n = -1;
+      switch (e.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+          n = (i + 1) % tabs.length;
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          n = (i - 1 + tabs.length) % tabs.length;
+          break;
+        case 'Home':
+          n = 0;
+          break;
+        case 'End':
+          n = tabs.length - 1;
+          break;
+        case 'Enter':
+        case ' ': {
+          e.preventDefault();
+          const slug = tabs[i]?.dataset.ivTab;
+          if (slug) activate(slug, true);
+          return;
+        }
+        default:
+          return;
+      }
+      e.preventDefault();
+      const slug = tabs[n]?.dataset.ivTab;
+      if (slug) activate(slug, true); // selection follows focus
+    });
+  }
+
+  document.addEventListener('astro:page-load', initInterviews);
+  initInterviews();
+</script>
+
+<style>
+  .iv-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 50px 56px 24px;
+  }
+  .iv-head h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    font-size: clamp(1.875rem, 5vw, 2.875rem);
+    padding-left: 0.3em;
+  }
+  .iv-count {
+    font-size: 0.625rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .iv {
+    display: grid;
+    grid-template-columns: minmax(200px, 250px) minmax(0, 1fr);
+    gap: 44px;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 6px 56px 200px;
+    align-items: start;
+  }
+
+  /* ---- Index (becomes a tablist) ---- */
+  .iv-index {
+    position: sticky;
+    top: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .iv-name {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: left;
+    text-decoration: none;
+    padding: 11px 14px 11px 16px;
+    border-left: 2px solid transparent;
+    cursor: pointer;
+    transition:
+      background var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+  .iv-name-cat {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.625rem;
+    letter-spacing: 0.22em;
+    color: var(--ink-3);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .iv-name-artist {
+    font-family: 'Cormorant Garamond', serif;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 1rem;
+    color: var(--ink-2);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .iv-name:hover .iv-name-artist {
+    color: var(--ink);
+  }
+  .iv-name[aria-selected='true'] {
+    border-left-color: var(--ember-deep);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--ember-deep) 16%, transparent), transparent 92%);
+  }
+  .iv-name[aria-selected='true'] .iv-name-artist {
+    color: var(--ink);
+  }
+  .iv-name[aria-selected='true'] .iv-name-cat {
+    color: var(--ember-deep);
+  }
+  .iv-name:focus-visible {
+    outline: 1px solid var(--ember);
+    outline-offset: -1px;
+  }
+
+  /* ---- Reading pane: bone "document" panel floating on the dark field
+     (Hsieh figure/ground flip). One warm accent for the whole view = oxblood. */
+  .iv-reader {
+    min-height: 60vh;
+  }
+  .iv-panel {
+    display: none;
+    background: var(--marble);
+    color: var(--paper-ink);
+    border: 1px solid var(--paper-line);
+    box-shadow:
+      0 50px 120px -45px color-mix(in srgb, var(--shadow) 85%, transparent),
+      inset 0 1px 0 var(--paper-glint);
+    padding: 46px 52px 56px;
+  }
+  .iv-panel.is-active {
+    display: block;
+  }
+
+  .iv-doc-head {
+    display: flex;
+    gap: 22px;
+    align-items: flex-start;
+  }
+  .iv-doc-cover {
+    width: 84px;
+    height: 84px;
+    object-fit: cover;
+    border: 1px solid var(--paper-line);
+    filter: grayscale(0.45) contrast(1.05);
+    flex: none;
+  }
+  .iv-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.625rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--ember-deep);
+  }
+  .iv-doc-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: clamp(1.75rem, 4vw, 3.125rem);
+    line-height: 1.04;
+    color: var(--paper-ink-strong);
+    margin: 12px 0 8px;
+  }
+  .iv-sub {
+    font-family: 'Spectral', Georgia, serif;
+    font-style: italic;
+    font-size: 1rem;
+    color: var(--paper-ink-soft);
+  }
+  .iv-listen {
+    font-family: 'IBM Plex Mono', monospace;
+    font-style: normal;
+    font-size: 0.625rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ember-deep);
+    text-decoration: none;
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 1px;
+  }
+  .iv-doc-rule {
+    height: 1px;
+    background: var(--paper-rule);
+    margin: 30px 0 6px;
+  }
+  .iv-pair {
+    margin: 24px 0;
+    max-width: 66ch;
+  }
+  .iv-q {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500;
+    font-style: italic;
+    font-size: 1.3125rem;
+    line-height: 1.45;
+    color: var(--ember-deep);
+    margin-bottom: 10px;
+  }
+  .iv-a {
+    font-family: 'Spectral', Georgia, serif;
+    font-size: 1.0625rem;
+    line-height: 1.78;
+    color: var(--paper-ink-body);
+    white-space: pre-wrap;
+  }
+
+  @media (max-width: 860px) {
+    .iv-head {
+      padding: 40px 24px 18px;
+    }
+    .iv {
+      grid-template-columns: 1fr;
+      gap: 20px;
+      padding: 6px 24px 180px;
+    }
+    /* Index becomes a horizontal scroll-snap strip of chips. */
+    .iv-index {
+      position: static;
+      flex-direction: row;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      scroll-snap-type: x proximity;
+      scrollbar-width: thin;
+    }
+    .iv-name {
+      flex: 0 0 auto;
+      border-left: none;
+      border-bottom: 2px solid transparent;
+      padding: 8px 12px;
+      scroll-snap-align: start;
+    }
+    .iv-name[aria-selected='true'] {
+      border-left: none;
+      border-bottom-color: var(--ember-deep);
+      background: none;
+    }
+    .iv-panel {
+      padding: 30px 22px 40px;
+    }
+    .iv-doc-cover {
+      width: 64px;
+      height: 64px;
+    }
+  }
+</style>
+
+{/* Scoped cross-fade for the reading pane (the only transitioned element). */}
+<style is:global>
+  @media (prefers-reduced-motion: no-preference) {
+    ::view-transition-old(iv-reader),
+    ::view-transition-new(iv-reader) {
+      animation-duration: var(--dur-page);
+      animation-timing-function: var(--ease-out);
+    }
+  }
+</style>

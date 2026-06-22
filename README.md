@@ -1,26 +1,78 @@
-<p align="center">
-  <a href="www.quietcast.art">
-    <img alt="homepage" src="https://i.ibb.co/2n7f3Bh/Screen-Shot-2021-06-18-at-4-13-27-PM.png" alt="Screen-Shot-2021-06-18-at-4-13-27-PM" width="560" />
-  </a>
-</p>
+# Quiet Cast — front-end (Astro)
 
+HTML-first relaunch of [quietcast.art](https://quietcast.art). Replaces the legacy
+Gatsby app in `../front-end/` (kept as salvage reference until cutover).
 
+## Stack
 
-# Quiet Cast
+| Concern              | Tech                                                          |
+| -------------------- | ------------------------------------------------------------- |
+| Framework            | **Astro 6** (static by default; SSR per-route via adapter)    |
+| Host                 | **Cloudflare Workers** (`@astrojs/cloudflare` v13; Pages support dropped) |
+| Islands              | **Preact** — audio player, favorites, upload form, post editor |
+| Navigation           | Astro `<ClientRouter />` + `transition:persist` (audio survives nav) |
+| Audio                | **Cloudflare R2** via `cdn.quietcast.art` (zero egress)       |
+| Auth + private data  | **Supabase** (Postgres + Auth, RLS)                           |
+| Editorial CMS        | **Sanity** (project `vcfngr79`)                               |
+| Video                | YouTube / Vimeo embeds                                        |
 
-Quiet Cast is a home for music and print interviews from musicians. It is the sister site of QuietCalmRecords.com which sells the music you can hear on Quiet Casts in vinyl formats. The site was built using React and Redux on the front-end and Sanity Headless CMS on the back. Apollo Client and GraphQL were used to query the data from Sanity. 
+Guiding principle: **HTML → CSS → JS, in that order.** No site-wide SPA framework;
+interactive islands only where needed.
 
-## Installation
+## Commands
 
-Run npm i to install all the necessary packages needed to get the application up and running on the development end. 
+| Command           | Action                                              |
+| ----------------- | --------------------------------------------------- |
+| `npm install`     | Install deps (corporate proxy: add `--registry=https://registry.npmjs.org/`) |
+| `npm run dev`     | Dev server at `localhost:4321`                      |
+| `npm run check`   | `astro check` — type + diagnostics                  |
+| `npm run build`   | Production build to `./dist`                         |
+| `npm run preview` | Serve the built Worker locally via `wrangler dev` (run `build` first) |
 
-```bash
-npm i
+## Environment
+
+Copy `.env.example` → `.env` and fill in. `PUBLIC_*` vars are inlined into the
+browser bundle (no secrets there). Env is typed + validated via Astro's
+`astro:env` (see `astro.config.mjs`). For deployed previews/prod, set these as
+Worker environment variables / secrets in the Cloudflare dashboard; for local
+binding access (R2) use `.dev.vars`.
+
+## Layout
+
+```
+src/
+  layouts/Base.astro      shell: head, fonts, nav, ClientRouter, persistent dock
+  pages/                  routes (static unless `export const prerender = false`)
+  components/             static .astro components
+  islands/                Preact interactive islands (hydrated on demand)
+  lib/
+    sanity.ts             public read client (editorial)
+    supabase.ts           browser client factory (RLS-backed islands)
+  styles/
+    tokens.css            design tokens — source of truth ("Cold Ember / Granite Liturgy")
+    global.css            chrome, fog, dock, view transitions
+public/images/            reference cover art (temporary; real art comes from Sanity)
+studio/                   Sanity Content Studio — schemas + config (see Studio below)
 ```
 
-## Adding a new mix/interview
+## Studio (Sanity CMS)
 
-Head to sanity.io using the credentials supplied from Quiet Calm Records to access the UI and add/edit music and interview content. 
+The editorial CMS lives in `studio/` (folded in from the retired
+[new-Home-Backend](https://github.com/Robert-Lark/new-Home-Backend) repo).
+Studio schemas and the GROQ projections in `src/lib/content.ts` must change
+together — that's why they share a repo.
 
-## Contributing
-If you would like to contribute a mix or an interview to this series please don't hesitate to reach out via quietcalmrecords@gmail.com
+- Run locally: `cd studio && npm install && npm start` (Sanity v2 studio;
+  upgrade to a `sanity.config.ts` studio is planned with the Phase 3
+  content remodel)
+- Deploy: `cd studio && npx sanity deploy` — manual, independent of the
+  Cloudflare build
+- Cloudflare Workers Builds should skip studio-only commits: in the
+  dashboard under **Settings → Build → Build watch paths**, exclude
+  `studio/*` (one-time manual step)
+
+## Design
+
+Direction: **A (Fog Minimal) shell + C calendar ledger for Archive + B industrial
+accent texture.** The one law: exactly one warm accent per view. Tokens live in
+`src/styles/tokens.css`; full design rationale in the project plan.

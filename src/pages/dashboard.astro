@@ -1,0 +1,425 @@
+---
+export const prerender = false;
+import Base from '../layouts/Base.astro';
+import ProfilePage from '../components/ProfilePage.astro';
+import { getEpisodes } from '../lib/content';
+import { isAdmin } from '../lib/supabase-admin';
+import { IMAGE_TYPES, IMAGE_MAX_BYTES, cdnUrl } from '../lib/ugc';
+import { presignR2Put, r2Configured } from '../lib/r2';
+import { CONNECTION_CATALOG, CONNECTION_KINDS, MAX_CONNECTIONS } from '../lib/connections';
+import {
+  buildActivity,
+  getConnections,
+  getProfileDetails,
+  getProfileRow,
+  getSiteNews,
+  getUserContent,
+  resolveMixTitles,
+  resolveTrack,
+  safeRows,
+} from '../lib/profile';
+import {
+  getWallComments,
+  handleWallAction,
+  resolveWallEntries,
+  type WallActionResult,
+} from '../lib/wall';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/login');
+const supabase = Astro.locals.supabase;
+
+// Grid edits and wall actions are plain POSTs back to this page; redirect
+// after success (PRG) so a refresh never re-pins or re-posts. RLS scopes
+// every write to the signed-in user. Failed wall actions and failed
+// free-form adds render inline.
+let wallResult: WallActionResult | null = null;
+let gridResult: { ok: boolean; message: string } | null = null;
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const action = form.get('action');
+
+  const wall = await handleWallAction(form, user, supabase, user.id);
+  if (wall) {
+    if (wall.ok) return Astro.redirect('/dashboard#wall');
+    wallResult = wall;
+  } else if (action === 'add-connection') {
+    const entry = CONNECTION_CATALOG.find((c) => c.slug === form.get('slug'));
+    if (entry) {
+      const existing = await getConnections(supabase, user.id);
+      if (existing.length < MAX_CONNECTIONS && !existing.some((c) => c.name === entry.name)) {
+        await supabase.from('connections').insert({
+          user_id: user.id,
+          kind: entry.kind,
+          name: entry.name,
+          image_url: entry.image,
+          link_url: entry.url,
+          position: Math.max(0, ...existing.map((c) => c.position)) + 1,
+        });
+      }
+    }
+  } else if (action === 'add-free-connection') {
+    // Free-form grid entry. Server-side validation is the real gate (the
+    // form's required/pattern attributes are UX only): trim + cap like
+    // wall.ts, kind from the catalog's list minus 'listener' (reserved for
+    // real listener pins), links restricted to http(s). The optional image
+    // follows the avatar pattern (settings.astro): small enough that the
+    // bytes transit this route to a presigned R2 PUT. Unpinning later orphans
+    // the object — expected; the R2 cleanup pass collects them.
+    const name = String(form.get('name') ?? '').trim().slice(0, 80);
+    const kind = String(form.get('kind') ?? '');
+    const link = String(form.get('link') ?? '').trim().slice(0, 500);
+    const upload = form.get('image');
+    const file = upload instanceof File && upload.size > 0 ? upload : null;
+    if (!name) {
+      gridResult = { ok: false, message: 'Give it a name first.' };
+    } else if (!(CONNECTION_KINDS as readonly string[]).includes(kind) || kind === 'listener') {
+      gridResult = { ok: false, message: 'Pick a kind from the list.' };
+    } else if (link && !/^https?:\/\//.test(link)) {
+      gridResult = { ok: false, message: 'Links must start with http:// or https://.' };
+    } else if (file && !IMAGE_TYPES[file.type]) {
+      gridResult = { ok: false, message: 'Use a JPG, PNG, or WebP image.' };
+    } else if (file && file.size > IMAGE_MAX_BYTES) {
+      gridResult = {
+        ok: false,
+        message: `Image too large — the limit is ${Math.floor(IMAGE_MAX_BYTES / (1024 * 1024))}MB.`,
+      };
+    } else if (file && !r2Configured()) {
+      gridResult = { ok: false, message: 'Image uploads are not configured on this deployment yet.' };
+    } else {
+      const existing = await getConnections(supabase, user.id);
+      if (existing.length >= MAX_CONNECTIONS) {
+        gridResult = { ok: false, message: 'Rotation full — unpin something to make room.' };
+      } else if (existing.some((c) => c.name === name)) {
+        gridResult = { ok: false, message: `“${name}” is already in your rotation.` };
+      } else {
+        let imageUrl: string | null = null;
+        if (file) {
+          const key = `user/${user.id}/grid/${crypto.randomUUID()}.${IMAGE_TYPES[file.type]}`;
+          const put = await fetch(await presignR2Put(key), {
+            method: 'PUT',
+            headers: { 'Content-Type': file.type },
+            body: await file.arrayBuffer(),
+          });
+          if (!put.ok) gridResult = { ok: false, message: 'Image upload failed — try again.' };
+          else imageUrl = cdnUrl(key);
+        }
+        if (!gridResult) {
+          const { error } = await supabase.from('connections').insert({
+            user_id: user.id,
+            kind,
+            name,
+            image_url: imageUrl,
+            link_url: link || null,
+            position: Math.max(0, ...existing.map((c) => c.position)) + 1,
+          });
+          if (error)
+            gridResult = {
+              ok: false,
+              // 23505 = the unique(user_id, name) constraint beat the dedupe
+              // check (a concurrent insert); anything else is most likely the
+              // table not existing yet.
+              message:
+                error.code === '23505'
+                  ? `“${name}” is already in your rotation.`
+                  : 'Could not pin it — has the 0003 migration run?',
+            };
+        }
+      }
+    }
+  } else if (action === 'remove-connection') {
+    const id = String(form.get('id') ?? '');
+    if (id) await supabase.from('connections').delete().eq('id', id).eq('user_id', user.id);
+  } else if (action === 'reorder-connections') {
+    // Full intended order as a comma-separated id list (from the RotationGrid
+    // island's drag/move controls, or their no-JS form fallbacks). Only a
+    // permutation of the user's current rows is accepted — anything else means
+    // the form was stale (a concurrent add/remove) or crafted.
+    const existing = await getConnections(supabase, user.id);
+    const ids = String(form.get('order') ?? '').split(',').filter(Boolean);
+    const mine = new Set(existing.map((c) => c.id));
+    const valid =
+      ids.length === existing.length && new Set(ids).size === ids.length && ids.every((id) => mine.has(id));
+    if (!valid) {
+      gridResult = { ok: false, message: 'Could not save that order — refresh and try again.' };
+    } else {
+      const results = await Promise.all(
+        ids.map((id, i) =>
+          supabase.from('connections').update({ position: i }).eq('id', id).eq('user_id', user.id),
+        ),
+      );
+      if (results.some((r) => r.error))
+        gridResult = { ok: false, message: 'Could not save that order — try again.' };
+    }
+  }
+  if (!wallResult && !gridResult) return Astro.redirect('/dashboard');
+}
+
+const episodes = await getEpisodes();
+const epByRef = new Map(episodes.map((e) => [e.slug, e]));
+
+const [profile, details, connections, content, wallComments, favorites, listens, news] = await Promise.all([
+  getProfileRow(supabase, user.id),
+  getProfileDetails(supabase, user.id),
+  getConnections(supabase, user.id),
+  getUserContent(supabase, user.id, false),
+  getWallComments(supabase, user.id),
+  safeRows<{ content_ref: string; created_at: string }>(
+    supabase
+      .from('favorites')
+      .select('content_ref, created_at')
+      .order('created_at', { ascending: false })
+      .limit(15),
+  ),
+  safeRows<{ content_ref: string; status: string; progress_seconds: number; updated_at: string }>(
+    supabase
+      .from('listen_status')
+      .select('content_ref, status, progress_seconds, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(15),
+  ),
+  getSiteNews(supabase, episodes),
+]);
+
+const [mixTitlesByRef, wall] = await Promise.all([
+  resolveMixTitles(supabase, [
+    ...favorites.map((f) => f.content_ref),
+    ...listens.map((l) => l.content_ref),
+  ]),
+  resolveWallEntries(supabase, wallComments),
+]);
+
+const activity = buildActivity({
+  content,
+  episodesByRef: epByRef,
+  mixTitlesByRef,
+  favorites,
+  listens,
+  connections,
+  wallNotes: wall,
+});
+
+const song = details?.profile_song_ref
+  ? await resolveTrack(supabase, details.profile_song_ref, epByRef)
+  : null;
+
+const displayName = profile?.display_name || user.email?.split('@')[0] || 'Listener';
+const memberSince = profile?.created_at
+  ? new Intl.DateTimeFormat('en', { month: 'long', year: 'numeric' }).format(new Date(profile.created_at))
+  : null;
+
+const inProgress = listens
+  .filter((l) => l.status === 'playing')
+  .map((l) => {
+    const ep = epByRef.get(l.content_ref);
+    return {
+      title: ep?.title ?? mixTitlesByRef.get(l.content_ref),
+      href: ep ? `/show/${ep.slug}` : `/mixes/${l.content_ref}`,
+      mins: Math.max(1, Math.floor(l.progress_seconds / 60)),
+    };
+  })
+  .filter((l) => l.title)
+  .slice(0, 4);
+
+const pinned = new Set(connections.map((c) => c.name));
+const catalog = CONNECTION_CATALOG.filter((c) => !pinned.has(c.name));
+
+const manage = [
+  { label: 'My mixtapes', rows: content.mixes, path: '/mixes', cta: 'Upload a mix', ctaHref: '/contribute/mix' },
+  { label: 'My posts', rows: content.posts, path: '/posts', cta: 'Write a post', ctaHref: '/contribute/post' },
+  { label: 'My lists', rows: content.lists, path: '/lists', cta: 'Make a list', ctaHref: '/contribute/list' },
+  { label: 'My concert photos', rows: content.albums, path: '/photos', cta: 'Share concert photos', ctaHref: '/contribute/photos' },
+];
+---
+
+<Base title="Account" section="account" theme={details?.theme ?? null}>
+  <ProfilePage
+    editable={true}
+    profileId={user.id}
+    displayName={displayName}
+    avatarUrl={profile?.avatar_url ?? null}
+    memberSince={memberSince}
+    email={user.email}
+    statusLine={details?.status_line}
+    bio={details?.bio}
+    isPublic={details?.is_public ?? false}
+    song={song}
+    connections={connections}
+    catalog={catalog}
+    gridFull={connections.length >= MAX_CONNECTIONS}
+    gridResult={gridResult}
+    activity={activity}
+    news={news}
+    wall={wall}
+    wallOpen={details?.is_public ?? false}
+    viewerId={user.id}
+    wallResult={wallResult}
+    showAdminLink={isAdmin(user)}
+  >
+    <Fragment slot="side">
+      {
+        inProgress.length > 0 && (
+          <div class="p-box side-box">
+            <h2 class="p-box-h eyebrow">Continue listening</h2>
+            <ul class="cont">
+              {inProgress.map((l) => (
+                <li>
+                  <a href={l.href}>
+                    <span class="cont-t">{l.title}</span>
+                    <span class="cont-n mono">{l.mins} min in</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+    </Fragment>
+
+    <section slot="manage" class="manage">
+      <div class="section-label manage-label">
+        <span class="eyebrow">My pages</span>
+        <span class="line"></span>
+      </div>
+      <div class="manage-grid">
+        {
+          manage.map((m) => (
+            <div class="manage-panel">
+              <h3 class="eyebrow">{m.label}</h3>
+              {m.rows.length === 0 ? (
+                <p class="manage-empty">Nothing yet.</p>
+              ) : (
+                <ul class="manage-rows">
+                  {m.rows.slice(0, 4).map((r) => (
+                    <li>
+                      <a href={`${m.path}/${r.id}`}>{r.title}</a>
+                      <span class="mono">{r.status}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <a class="manage-cta mono" href={m.ctaHref}>{m.cta}</a>
+            </div>
+          ))
+        }
+      </div>
+    </section>
+  </ProfilePage>
+</Base>
+
+<style>
+  /* Slotted content is styled here (page scope), not in ProfilePage. The
+     .p-box/.p-box-h shells come from ProfilePage's scope, so the side box
+     restates them — keep the two in sync. */
+  .side-box {
+    border: 1px solid var(--hairline);
+    background: var(--surface-1);
+  }
+  .side-box .p-box-h {
+    display: block;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--hairline);
+    font-weight: 400;
+  }
+  .cont {
+    list-style: none;
+  }
+  .cont a {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--hairline-soft);
+    text-decoration: none;
+  }
+  .cont li:last-child a {
+    border-bottom: none;
+  }
+  .cont-t {
+    font-size: 0.875rem;
+    color: var(--ink);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .cont a:hover .cont-t {
+    color: var(--ember);
+  }
+  .cont-n {
+    font-size: 0.625rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  .manage-label {
+    padding: 0;
+    margin: 0 0 16px;
+  }
+  .manage-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 26px 36px;
+  }
+  .manage-panel {
+    display: flex;
+    flex-direction: column;
+  }
+  .manage-panel h3 {
+    font-weight: 400;
+    margin-bottom: 10px;
+  }
+  .manage-empty {
+    color: var(--ink-3);
+    font-style: italic;
+    font-size: 0.9375rem;
+  }
+  .manage-rows {
+    list-style: none;
+  }
+  .manage-rows li {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--hairline-soft);
+  }
+  .manage-rows a {
+    font-size: 0.9375rem;
+    color: var(--ink);
+    text-decoration: none;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .manage-rows a:hover {
+    color: var(--ember);
+  }
+  .manage-rows .mono {
+    font-size: 0.625rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+  }
+  .manage-cta {
+    align-self: flex-start;
+    margin-top: 12px;
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 9px 14px;
+    color: var(--ink-2);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.625rem;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .manage-cta:hover {
+    border-color: var(--ember);
+    color: var(--ember);
+  }
+
+  @media (max-width: 700px) {
+    .manage-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

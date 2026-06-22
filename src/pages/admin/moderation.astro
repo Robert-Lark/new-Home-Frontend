@@ -1,0 +1,302 @@
+---
+export const prerender = false;
+import Base from '../../layouts/Base.astro';
+import { isAdmin, createSupabaseAdminClient } from '../../lib/supabase-admin';
+import { displayNames, ugcDate } from '../../lib/ugc';
+
+/**
+ * Post-hoc moderation: there is no review queue — users publish themselves
+ * (0005). This page handles what's left: reports, and takedowns (status →
+ * 'removed', which RLS makes irreversible for the author). Gated on
+ * ADMIN_EMAIL (404s for everyone else, so the route doesn't advertise
+ * itself); uses the service-role client — the only place RLS is bypassed.
+ */
+if (!isAdmin(Astro.locals.user)) return new Response(null, { status: 404 });
+
+let admin;
+try {
+  admin = createSupabaseAdminClient();
+} catch {
+  admin = null;
+}
+
+const KIND_TABLE: Record<string, string> = {
+  mix: 'user_uploads',
+  post: 'posts',
+  list: 'lists',
+  album: 'photo_albums',
+};
+
+let actionError: string | null = null;
+if (admin && Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const kind = String(form.get('kind') ?? '');
+  const id = String(form.get('id') ?? '');
+  const action = String(form.get('action') ?? '');
+
+  if (kind === 'report' && (action === 'reviewed' || action === 'dismissed')) {
+    const { error } = await admin.from('reports').update({ status: action }).eq('id', id);
+    actionError = error?.message ?? null;
+  } else if (kind === 'wall' && action === 'takedown') {
+    // Wall comments have no reviewed_at column — status flip only.
+    const { error } = await admin.from('wall_comments').update({ status: 'removed' }).eq('id', id);
+    actionError = error?.message ?? null;
+  } else if (KIND_TABLE[kind] && action === 'takedown') {
+    const { error } = await admin
+      .from(KIND_TABLE[kind])
+      .update({ status: 'removed', reviewed_at: new Date().toISOString() })
+      .eq('id', id);
+    actionError = error?.message ?? null;
+  } else {
+    actionError = 'Unrecognized moderation action.';
+  }
+  if (!actionError) return Astro.redirect('/admin/moderation', 303);
+}
+
+async function safe<T>(query: PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
+  try {
+    const { data, error } = await query;
+    return error || !data ? [] : data;
+  } catch {
+    return [];
+  }
+}
+
+const reports = admin
+  ? await safe<{
+      id: string;
+      reporter_id: string;
+      content_type: string;
+      content_ref: string;
+      reason: string | null;
+      created_at: string;
+    }>(
+      admin
+        .from('reports')
+        .select('id, reporter_id, content_type, content_ref, reason, created_at')
+        .eq('status', 'open')
+        .order('created_at', { ascending: true }),
+    )
+  : [];
+
+// Reported wall comments render inline (they have no detail page of their
+// own): pull the bodies so the curator can judge without leaving the page.
+const wallRefs = [
+  ...new Set(reports.filter((r) => r.content_type === 'wall_comment').map((r) => r.content_ref)),
+];
+const reportedWall =
+  admin && wallRefs.length > 0
+    ? await safe<{ id: string; profile_id: string; author_id: string; body: string; status: string }>(
+        admin.from('wall_comments').select('id, profile_id, author_id, body, status').in('id', wallRefs),
+      )
+    : [];
+const wallByRef = new Map(reportedWall.map((w) => [w.id, w]));
+
+const names = admin
+  ? await displayNames(admin, [
+      ...reports.map((r) => r.reporter_id),
+      ...reportedWall.map((w) => w.author_id),
+    ])
+  : new Map<string, string>();
+const by = (uid: string) => names.get(uid) ?? uid.slice(0, 8);
+
+/** Where a report's content lives on the site + which kind takes it down. */
+const REPORT_TARGET: Record<string, { path: string; kind: string } | undefined> = {
+  upload: { path: '/mixes/', kind: 'mix' },
+  post: { path: '/posts/', kind: 'post' },
+  list: { path: '/lists/', kind: 'list' },
+  photo_album: { path: '/photos/', kind: 'album' },
+};
+---
+
+<Base title="Moderation" section="account">
+  <section class="mod">
+    <header class="head">
+      <div>
+        <span class="eyebrow">Curator only</span>
+        <h1>Moderation</h1>
+      </div>
+      <span class="eyebrow">{reports.length} open reports</span>
+    </header>
+
+    {!admin && <p class="warn">SUPABASE_SERVICE_ROLE_KEY isn't configured — reports can't load.</p>}
+    {actionError && <p class="warn">{actionError}</p>}
+
+    {admin && reports.length === 0 && <p class="empty">Nothing reported. The signal is clean.</p>}
+
+    {
+      reports.length > 0 && (
+        <>
+          <div class="section-label"><span class="eyebrow">Reports</span><span class="line" /><span class="eyebrow">{reports.length}</span></div>
+          {reports.map((r) => {
+            const target = REPORT_TARGET[r.content_type];
+            const wallc = r.content_type === 'wall_comment' ? wallByRef.get(r.content_ref) : undefined;
+            return (
+              <div class="item">
+                <div class="meta">
+                  <span class="t">
+                    {r.content_type}
+                    {wallc ? (
+                      <a class="s" href={`/u/${wallc.profile_id}#wall`}> · view wall ↗</a>
+                    ) : r.content_type === 'wall_comment' ? (
+                      <span class="s"> · comment already deleted</span>
+                    ) : target ? (
+                      <a class="s" href={`${target.path}${r.content_ref}`}> · view ↗</a>
+                    ) : (
+                      <span class="s"> · {r.content_ref}</span>
+                    )}
+                  </span>
+                  <span class="s mono">reported by {by(r.reporter_id)} · {ugcDate(r.created_at)}</span>
+                  {wallc && (
+                    <p class="d">
+                      {by(wallc.author_id)} wrote: "{wallc.body}"
+                      {wallc.status === 'removed' && <span class="s mono"> — already removed</span>}
+                    </p>
+                  )}
+                  {r.reason && <p class="d">"{r.reason}"</p>}
+                </div>
+                <div class="acts">
+                  {wallc && wallc.status !== 'removed' && (
+                    <form method="POST" data-astro-reload>
+                      <input type="hidden" name="kind" value="wall" />
+                      <input type="hidden" name="id" value={r.content_ref} />
+                      <button class="no" name="action" value="takedown">Take down</button>
+                    </form>
+                  )}
+                  {target && (
+                    <form method="POST" data-astro-reload>
+                      <input type="hidden" name="kind" value={target.kind} />
+                      <input type="hidden" name="id" value={r.content_ref} />
+                      <button class="no" name="action" value="takedown">Take down</button>
+                    </form>
+                  )}
+                  <form method="POST" data-astro-reload>
+                    <input type="hidden" name="kind" value="report" />
+                    <input type="hidden" name="id" value={r.id} />
+                    <button class="ok" name="action" value="reviewed">Mark reviewed</button>
+                    <button class="no ghost" name="action" value="dismissed">Dismiss</button>
+                  </form>
+                </div>
+              </div>
+            );
+          })}
+        </>
+      )
+    }
+  </section>
+</Base>
+
+<style>
+  .mod {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 50px 48px 220px;
+  }
+  .head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 30px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    color: var(--ink);
+    margin-top: 14px;
+  }
+  .section-label {
+    padding: 0;
+    margin: 40px 0 8px;
+  }
+  .warn {
+    margin-top: 30px;
+    color: var(--ember-deep);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+  }
+  .empty {
+    margin-top: 40px;
+    color: var(--ink-3);
+    font-style: italic;
+    font-size: 1rem;
+  }
+  .item {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--hairline-soft);
+  }
+  .meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .t {
+    color: var(--ink);
+    font-size: 1rem;
+  }
+  .t a {
+    color: var(--ink-3);
+    text-decoration: none;
+  }
+  .t a:hover {
+    color: var(--ember);
+  }
+  .s {
+    font-size: 0.625rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-3);
+  }
+  .d {
+    color: var(--ink-2);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    max-width: 60ch;
+  }
+  .acts {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .acts form {
+    display: flex;
+    gap: 8px;
+  }
+  .acts button {
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 0.625rem;
+    padding: 9px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all var(--dur-fast) var(--ease-out);
+  }
+  .acts .ok {
+    background: var(--ember);
+    border: 1px solid var(--ember);
+    color: var(--on-ember);
+  }
+  .acts .ok:hover {
+    transform: translateY(-1px);
+  }
+  .acts .no {
+    background: none;
+    border: 1px solid var(--hairline);
+    color: var(--ink-2);
+  }
+  .acts .no:hover {
+    border-color: var(--ember-deep);
+    color: var(--ember-deep);
+  }
+</style>

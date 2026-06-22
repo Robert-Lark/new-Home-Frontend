@@ -1,0 +1,123 @@
+---
+export const prerender = false;
+import Base from '../../layouts/Base.astro';
+
+if (!Astro.locals.user) return Astro.redirect('/login');
+
+const flows = [
+  {
+    href: '/contribute/mix',
+    label: 'A mix',
+    blurb: 'Upload your own mixtape — audio, cover art, tracklist.',
+  },
+  {
+    href: '/contribute/post',
+    label: 'A post',
+    blurb: 'Write a review, a show report, a piece on a record.',
+  },
+  {
+    href: '/contribute/list',
+    label: 'A list',
+    blurb: 'Curate favorite records, artists, labels, shows.',
+  },
+  {
+    href: '/contribute/photos',
+    label: 'Concert photos',
+    blurb: 'An album of pictures from a show you attended.',
+  },
+] as const;
+---
+
+<Base title="Contribute" section="community">
+  <section class="contribute">
+    <span class="eyebrow">Community</span>
+    <h1>Contribute</h1>
+    <p class="intro">
+      Public or private is your call when you post — and you can flip it later from the piece's
+      page. The community shelf shows whatever you've made public.
+    </p>
+    <div class="flows">
+      {
+        flows.map((f) => (
+          <a class="flow" href={f.href}>
+            <span class="flow-t">{f.label}</span>
+            <span class="flow-b">{f.blurb}</span>
+            <span class="flow-go mono">→</span>
+          </a>
+        ))
+      }
+    </div>
+  </section>
+</Base>
+
+<style>
+  .contribute {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 80px 48px 220px;
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: clamp(1.75rem, 4vw, 2.75rem);
+    color: var(--ink);
+    margin: 14px 0 12px;
+  }
+  .intro {
+    color: var(--ink-2);
+    font-style: italic;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 44px;
+  }
+  .flows {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .flow {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 26px;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    background: var(--surface-1);
+    text-decoration: none;
+    transition: border-color var(--dur-fast) var(--ease-out);
+  }
+  .flow:hover {
+    border-color: var(--ember);
+  }
+  .flow-t {
+    font-family: 'Cormorant Garamond', serif;
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    font-size: 1.1875rem;
+    color: var(--ink);
+  }
+  .flow-b {
+    color: var(--ink-2);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+  }
+  .flow-go {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    color: var(--ink-3);
+    font-size: 0.8125rem;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .flow:hover .flow-go {
+    color: var(--ember);
+  }
+  @media (max-width: 640px) {
+    .flows {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
